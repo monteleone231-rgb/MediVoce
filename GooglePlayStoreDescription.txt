@@ -1,0 +1,23 @@
+Descrizione per il Google Play Store:
+=======================================
+
+MediVoce – L’Assistente Vocale per i Tuoi Farmaci
+
+MediVoce è l'app semplice, intuitiva e pensata appositamente per chi ha bisogno di un aiuto in più per ricordarsi di prendere le medicine, come anziani o persone con terapie quotidiane. Ti parla, ti ascolta e ti ricorda cosa devi prendere con una voce chiara e rassicurante.
+
+Caratteristiche principali:
+- 🔊 Promemoria vocali intelligenti: ti chiama per nome e ti dice esattamente quale medicina prendere, senza dover leggere testi piccoli.
+- 📸 Scanner Codice a Barre: inquadra la scatola e l'app compila automaticamente nome del farmaco, dosaggio e istruzioni.
+- 🗺️ Trova Farmacia: localizza immediatamente le farmacie aperte più vicine con un solo tocco.
+- 📞 Chiamata di Emergenza: un bottone rapido per chiamare un parente o un medico.
+- 🌙 Accessibile: colori ad alto contrasto, interfaccia semplice, caratteri grandi, Always On Display e suoni configurabili.
+- 🔒 Massima Privacy: funziona Offline, non ha database remoti e i tuoi dati sanitari non lasciano mai il telefono!
+
+---
+
+⚠️ AVVERTENZA MEDICA IMPORTANTE ⚠️
+Quest'app è concepita ESCLUSIVAMENTE come uno strumento di promemoria organizzativo personale.
+MediVoce NON sostituisce in alcun modo il consiglio, la diagnosi, la prescrizione o le raccomandazioni del tuo medico curante, di uno specialista o del tuo farmacista. Consulta sempre professionisti qualificati per qualsiasi decisione riguardante le tue terapie e la tua salute. Se hai un'emergenza medica, contatta subito il pronto soccorso o i servizi di emergenza locali.
+
+Privacy Policy Lineare:
+L'app opera esclusivamente in modalità locale, registrando tutto all'interno della memoria del tuo dispositivo. Non c'è un server, non ci sono database remoti e MediVoce non traccia, non analizza e non vende le abitudini dell'utente. I tuoi dati sanitari ti appartengono e rimangono solo sul tuo schermo.

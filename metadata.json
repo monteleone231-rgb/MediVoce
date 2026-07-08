@@ -1,0 +1,11 @@
+{
+  "name": "Remix: MediVoce",
+  "description": "Un\u0027app mobile accessibile, vocale ed empatica per aiutare le persone (soprattutto gli anziani) a ricordarsi di prendere le medicine, con notifiche vocali, controllo fotocamera per farmaci e codice Android integrato.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
