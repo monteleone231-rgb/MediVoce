@@ -1,6 +1,8 @@
 package com.example.medivoce
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.webkit.ConsoleMessage
@@ -20,6 +22,15 @@ private const val TAG_NATIVE = "MediVoceNative"
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
+
+    private fun isTrustedUrl(url: String): Boolean {
+        val uri = Uri.parse(url)
+        val host = uri.host ?: return false
+        // Allow local development, loopbacks, and Google Cloud Run dev/pre URLs
+        return host == "localhost" || 
+               host == "127.0.0.1" || 
+               host.endsWith(".run.app")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +59,39 @@ class MainActivity : AppCompatActivity() {
             webViewClient = object : WebViewClient() {
                 override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                     Log.e(TAG_ERROR, "WebView Load Failed! Error: ${error?.description}")
+                }
+
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val url = request?.url?.toString() ?: return false
+                    
+                    // Handle telephone links (e.g. clicking "Chiama Ora" emergency button in React UI)
+                    if (url.startsWith("tel:")) {
+                        try {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(TAG_NATIVE, "Failed to launch native dialer for URI: $url", e)
+                        }
+                        return true
+                    }
+
+                    // Security: Sandbox external web pages. If the user clicks an external link (like BuyMeACoffee),
+                    // open it in the default system browser instead of the WebView to prevent foreign JS from executing native bridge calls.
+                    if (!isTrustedUrl(url)) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(TAG_NATIVE, "Failed to launch external browser for URI: $url", e)
+                        }
+                        return true
+                    }
+
+                    return false
                 }
             }
 
