@@ -49,24 +49,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   return (
-    <div id="onboarding-root" className="fixed inset-0 bg-[#F0F4F8] z-50 flex flex-col justify-between p-6 md:p-10 font-sans text-[#1E293B]">
-      
-      {/* Upper header section */}
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center text-white font-bold text-lg shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
-            MV
+    <div id="onboarding-root" className="fixed inset-0 bg-[#F0F4F8] z-50 overflow-y-auto font-sans text-[#1E293B]">
+      <div className="min-h-full w-full max-w-lg mx-auto flex flex-col justify-between p-5 sm:p-8 md:p-10 gap-6">
+        {/* Upper header section */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center text-white font-bold text-lg shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+              MV
+            </div>
+            <span className="font-sans font-extrabold text-xl tracking-tight text-[#1E3A8A]">MediVoce</span>
           </div>
-          <span className="font-sans font-extrabold text-xl tracking-tight text-[#1E3A8A]">MediVoce</span>
-        </div>
-        <div className="flex items-center gap-2 bg-[#EFF6FF] py-1 px-3 rounded-full text-xs font-semibold text-[#1E40AF] border border-[#DBEAFE]">
-          <Globe className="w-3.5 h-3.5 text-[#2563EB]" />
-          <span>{lang.toUpperCase()}</span>
-        </div>
-      </header>
+          <div className="flex items-center gap-2 bg-[#EFF6FF] py-1 px-3 rounded-full text-xs font-semibold text-[#1E40AF] border border-[#DBEAFE]">
+            <Globe className="w-3.5 h-3.5 text-[#2563EB]" />
+            <span>{lang.toUpperCase()}</span>
+          </div>
+        </header>
 
-      {/* Main card illustration / text */}
-      <main className="my-auto max-w-lg mx-auto w-full">
+        {/* Main card illustration / text */}
+        <main className="flex-1 flex flex-col justify-center my-auto w-full">
         <AnimatePresence mode="wait">
           {step === -1 && (
             <motion.div
@@ -142,9 +142,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </div>
 
               {/* Asset loaded or placeholder illustration wrapper */}
-              <div className="relative mx-auto w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden bg-white shadow-md border border-[#E2E8F0] flex items-center justify-center p-2">
+              <div className="relative mx-auto w-36 h-36 sm:w-48 sm:h-48 rounded-2xl overflow-hidden bg-white shadow-md border border-[#E2E8F0] flex items-center justify-center p-2">
                 <img
-                  src="/src/assets/images/app_icon_pill_1781627596851.jpg"
+                  src="/src/assets/images/app_icon_pill_1783613961215.jpg"
                   alt="MediVoce Logo Graphic"
                   className="w-full h-full object-contain"
                   referrerPolicy="no-referrer"
@@ -293,6 +293,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           </div>
         </footer>
       )}
+      </div>
     </div>
   );
 }
