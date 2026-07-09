@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
                             val intent = Intent(Intent.ACTION_DIAL, Uri.parse(url)).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
-                            context.startActivity(intent)
+                            this@MainActivity.startActivity(intent)
                         } catch (e: Exception) {
                             Log.e(TAG_NATIVE, "Failed to launch native dialer for URI: $url", e)
                         }
@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
-                            context.startActivity(intent)
+                            this@MainActivity.startActivity(intent)
                         } catch (e: Exception) {
                             Log.e(TAG_NATIVE, "Failed to launch external browser for URI: $url", e)
                         }
@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
 
             // Load the React Web App
             // We load the Development App URL for seamless live preview and native synchronization
-            loadUrl("https://ais-dev-o2sc4vs3bmkzzjiwtauxky-910409829424.europe-west2.run.app")
+            loadUrl("https://ais-dev-slg7pwjak5aiqtogphpvqd-910409829424.europe-west2.run.app")
         }
 
         setContentView(webView)
