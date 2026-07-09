@@ -64,6 +64,11 @@ class MainActivity : AppCompatActivity() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val url = request?.url?.toString() ?: return false
                     
+                    // Let the WebView load local assets internally
+                    if (url.startsWith("file:///android_asset/")) {
+                        return false
+                    }
+
                     // Handle telephone links (e.g. clicking "Chiama Ora" emergency button in React UI)
                     if (url.startsWith("tel:")) {
                         try {
@@ -99,8 +104,8 @@ class MainActivity : AppCompatActivity() {
             addJavascriptInterface(WebAppInterface(context), "Android")
 
             // Load the React Web App
-            // We load the Development App URL for seamless live preview and native synchronization
-            loadUrl("https://ais-dev-slg7pwjak5aiqtogphpvqd-910409829424.europe-west2.run.app")
+            // Load from embedded local assets for full offline operation
+            loadUrl("file:///android_asset/index.html")
         }
 
         setContentView(webView)
