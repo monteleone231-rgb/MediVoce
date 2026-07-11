@@ -1,9 +1,11 @@
 package com.example.medivoce
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -41,6 +43,20 @@ class AlarmScheduler(private val context: Context) {
             }
             context.startActivity(intent)
             return
+        }
+
+        // Enforce Android 14+ (SDK 34+) full screen intent permission check
+        if (Build.VERSION.SDK_INT >= 34) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (!notificationManager.canUseFullScreenIntent()) {
+                Toast.makeText(context, "Permesso per le schermate d'allarme necessario. Apertura Impostazioni...", Toast.LENGTH_LONG).show()
+                val intent = Intent("android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                context.startActivity(intent)
+                return
+            }
         }
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {

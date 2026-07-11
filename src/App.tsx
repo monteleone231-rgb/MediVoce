@@ -19,7 +19,6 @@ import Onboarding from './components/Onboarding';
 import BarcodeScanner from './components/BarcodeScanner';
 import PharmacyLocator from './components/PharmacyLocator';
 import HistoryAndNotes from './components/HistoryAndNotes';
-import AndroidDevDocs from './components/AndroidDevDocs';
 
 export type ColorTheme = 'blue' | 'orange' | 'teal' | 'purple' | 'rose';
 
@@ -311,14 +310,40 @@ export default function App() {
 
   const [langDropdownOpen, setLangDropdownOpen] = useState<boolean>(false);
 
+  // Custom imported sounds
+  const [importedSounds, setImportedSounds] = useState<{ id: string; name: string; dataUrl: string }[]>(() => {
+    const saved = localStorage.getItem('medivoce_custom_sounds');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showImportSoundsModal, setShowImportSoundsModal] = useState<boolean>(false);
+
   // Interactive speaking notification modal
   const [activeVoiceReminder, setActiveVoiceReminder] = useState<Medication | null>(null);
   const [isListeningForConfirm, setIsListeningForConfirm] = useState<boolean>(false);
+  const [showDevDocs, setShowDevDocs] = useState<boolean>(false);
+
+  // Warm up Web Speech synthesis voices on mount to ensure voices are preloaded on mobile devices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const handleVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+      return () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+      };
+    }
+  }, []);
 
   // Persistence hooks
   useEffect(() => {
     localStorage.setItem('medivoce_meds', JSON.stringify(medications));
   }, [medications]);
+
+  useEffect(() => {
+    localStorage.setItem('medivoce_custom_sounds', JSON.stringify(importedSounds));
+  }, [importedSounds]);
 
   useEffect(() => {
     localStorage.setItem('medivoce_notes', JSON.stringify(notes));
@@ -392,6 +417,70 @@ export default function App() {
     return () => clearInterval(timer);
   }, [medications, activeVoiceReminder]);
 
+  // Synchronize all medications with the native Android AlarmManager
+  useEffect(() => {
+    // 1. Check if any medications are missing nativeId
+    const missingNativeId = medications.some(m => !m.nativeId);
+    if (missingNativeId) {
+      setMedications(prev => prev.map(m => {
+        if (!m.nativeId) {
+          return { ...m, nativeId: Math.floor(Math.random() * 10000000) };
+        }
+        return m;
+      }));
+      return; // The state update will trigger this useEffect again with complete nativeId list
+    }
+
+    // 2. Perform native synchronization
+    const android = (window as any).Android;
+    if (android) {
+      console.log("[MediVoce] Synchronizing medications with native AlarmManager...");
+      
+      // Schedule or cancel each medication alarm
+      medications.forEach(med => {
+        const nativeId = med.nativeId!;
+        if (med.isActive) {
+          // Calculate next alarm time in milliseconds
+          const [hours, minutes] = med.time.split(':').map(Number);
+          const now = new Date();
+          const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+          
+          if (target.getTime() <= now.getTime()) {
+            target.setDate(target.getDate() + 1);
+          }
+
+          try {
+            android.scheduleAlarm(target.getTime(), nativeId, med.name);
+            console.log(`[MediVoce] Native scheduled: ${med.name} (${nativeId}) at ${target.toISOString()}`);
+          } catch (e) {
+            console.error(`[MediVoce] Error scheduling ${med.name}:`, e);
+          }
+        } else {
+          try {
+            android.cancelAlarm(nativeId);
+            console.log(`[MediVoce] Native cancelled inactive: ${med.name} (${nativeId})`);
+          } catch (e) {
+            console.error(`[MediVoce] Error cancelling inactive ${med.name}:`, e);
+          }
+        }
+      });
+
+      // 3. Save serialized alarms list to native storage (SharedPreferences) for BootReceiver persistence
+      try {
+        const alarmsToSave = medications.map(m => ({
+          nativeId: m.nativeId,
+          name: m.name,
+          time: m.time,
+          isActive: m.isActive
+        }));
+        android.saveAlarmsToNative?.(JSON.stringify(alarmsToSave));
+        console.log("[MediVoce] Saved active alarms to native storage for BootReceiver.");
+      } catch (e) {
+        console.error("[MediVoce] Error saving alarms list to native storage:", e);
+      }
+    }
+  }, [medications]);
+
   // Time-of-day contextual Greeting Selector
   const getContextualGreeting = () => {
     const hrs = currentTime.getHours();
@@ -437,7 +526,8 @@ export default function App() {
             category: formCategory,
             weeklySchedule: formSchedule,
             audioTone: formAudioTone,
-            voicePrompt: formVoicePrompt || `${t.speakAlert}: ${formName}. ${formDosage}. ${formNotes}`
+            voicePrompt: formVoicePrompt || `${t.speakAlert}: ${formName}. ${formDosage}. ${formNotes}`,
+            nativeId: m.nativeId || Math.floor(Math.random() * 10000000)
           };
         }
         return m;
@@ -455,7 +545,8 @@ export default function App() {
         isActive: true,
         history: {},
         audioTone: formAudioTone,
-        voicePrompt: formVoicePrompt || `${t.speakAlert}: ${formName}. ${formDosage}. ${formNotes}`
+        voicePrompt: formVoicePrompt || `${t.speakAlert}: ${formName}. ${formDosage}. ${formNotes}`,
+        nativeId: Math.floor(Math.random() * 10000000)
       };
       setMedications(prev => [newM, ...prev]);
     }
@@ -488,6 +579,19 @@ export default function App() {
 
   const deleteMedication = (id: string) => {
     if (confirm(lang === 'it' ? "Eliminare questo farmaco?" : "Delete this medication?")) {
+      const medToDelete = medications.find(m => m.id === id);
+      if (medToDelete) {
+        const android = (window as any).Android;
+        if (android) {
+          const nativeId = medToDelete.nativeId || Math.floor(Math.random() * 10000000);
+          try {
+            android.cancelAlarm(nativeId);
+            console.log(`[MediVoce] Cancelled native alarm for ${medToDelete.name} on deletion.`);
+          } catch (e) {
+            console.error("Error cancelling native alarm on deletion:", e);
+          }
+        }
+      }
       setMedications(prev => prev.filter(m => m.id !== id));
     }
   };
@@ -535,7 +639,7 @@ export default function App() {
     const textToSpeak = med.voicePrompt || `${t.speakAlert}: ${med.name}. ${med.dosage}. ${med.notes}`;
     setTimeout(() => {
       speakAnnouncement(textToSpeak, lang, speechSpeed, speechTone);
-    }, 900);
+    }, 50);
   };
 
   // Microphone confirm: speech recognition says "Preso" / "Si" to close alert
@@ -621,7 +725,7 @@ export default function App() {
   const todayTaken = todayMeds.filter(med => (med.history || {})[todayStr] === true).length;
 
   return (
-    <div id="application-container" className={`min-h-screen py-8 sm:py-12 px-4 flex justify-center items-center font-sans ${appTheme === 'dark' ? 'bg-slate-900' : appTheme === 'warm' ? 'bg-amber-100' : 'bg-[#F0F4F8]'}`}>
+    <div id="application-container" className={`min-h-screen w-full flex justify-center items-center font-sans p-0 sm:p-4 md:py-8 ${appTheme === 'dark' ? 'bg-slate-900' : appTheme === 'warm' ? 'bg-amber-100' : 'bg-[#F0F4F8]'}`}>
       
       <AnimatePresence>
 
@@ -629,7 +733,7 @@ export default function App() {
       </AnimatePresence>
 
         {/* ACCESS-SAFE MOBILE CONTAINER FRAME EMULATOR */}
-        <div id="mobile-shell-emulator" className={`relative w-full max-w-sm rounded-[40px] shadow-[0_25px_60px_-15px_rgba(30,58,138,0.25)] border-[10px] border-[#1E293B] overflow-hidden flex flex-col h-[820px] select-none ${appTheme === 'dark' ? 'bg-slate-800' : appTheme === 'warm' ? 'bg-orange-50' : 'bg-[#F8FAFC]'}`}>
+        <div id="mobile-shell-emulator" className={`relative w-full max-w-full sm:max-w-sm rounded-none sm:rounded-[40px] shadow-none sm:shadow-[0_25px_60px_-15px_rgba(30,58,138,0.25)] border-0 sm:border-[10px] sm:border-[#1E293B] overflow-hidden flex flex-col h-screen sm:h-[820px] select-none ${appTheme === 'dark' ? 'bg-slate-800' : appTheme === 'warm' ? 'bg-orange-50' : 'bg-[#F8FAFC]'}`}>
 
         {/* Dynamic Speech Active Fullscreen overlay */}
         <AnimatePresence>
@@ -1149,9 +1253,9 @@ export default function App() {
                   <button
                     id="import-device-sounds-btn"
                     onClick={() => {
-                      alert(lang === 'it' ? "Suoni di sistema del dispositivo importati. Verranno utilizzati al prossimo avviso." : "Device system sounds imported. They will be used on next alert.");
+                      setShowImportSoundsModal(true);
                     }}
-                    className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] w-full mt-3 flex justify-center gap-2 border-dashed"
+                    className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] w-full mt-3 flex justify-center gap-2 border-dashed hover:bg-slate-50 transition-all cursor-pointer"
                   >
                     <Volume2 className="w-4 h-4" />
                     <span>{lang === 'it' ? "Importa Suoni Dispositivo (Nativo)" : "Import Device Sounds (Native)"}</span>
@@ -1336,8 +1440,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* ANDROID ALARMMANAGER NATIVE EXPORTER CODE BOX */}
-                <AndroidDevDocs lang={lang} />
+
 
                 {/* DONATION BLOCK */}
                 <div className="bg-amber-50 p-5 rounded-3xl border border-amber-200 text-left space-y-4 shadow-sm">
@@ -1628,7 +1731,8 @@ export default function App() {
                         { key: 'standard', title: '⏱️ Standard' },
                         { key: 'campana', title: '🔔 Campana' },
                         { key: 'tranquillo', title: '🕊️ Dolce' },
-                        { key: 'sirena', title: '🚨 Sirena' }
+                        { key: 'sirena', title: '🚨 Sirena' },
+                        ...importedSounds.map(s => ({ key: `custom_${s.id}`, title: `🎵 ${s.name.length > 8 ? s.name.substring(0, 7) + '..' : s.name}` }))
                       ].map((item) => (
                         <button
                           key={item.key}
@@ -1637,7 +1741,7 @@ export default function App() {
                             setFormAudioTone(item.key);
                             playAlarmTone(item.key);
                           }}
-                          className={`py-2 px-1 rounded-xl border text-center transition-all text-3xs font-extrabold ${
+                          className={`py-2 px-1 rounded-xl border text-center transition-all text-3xs font-extrabold truncate ${
                             formAudioTone === item.key 
                               ? 'bg-amber-100 text-amber-900 border-[#E58045]' 
                               : 'bg-[#FCFAF7] border-gray-200 text-gray-600'
@@ -1688,6 +1792,225 @@ export default function App() {
               onScanSuccess={handleBarcodeDecoded}
               onClose={() => setShowScanner(false)}
             />
+          )}
+        </AnimatePresence>
+
+
+        {/* ACCESSORY MODAL: CUSTOM DEVICE SOUNDS IMPORT POPUP CARD */}
+        <AnimatePresence>
+          {showImportSoundsModal && (
+            <motion.div
+              id="import-sounds-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 z-50 flex items-end justify-center"
+            >
+              <motion.div
+                initial={{ y: 100 }}
+                animate={{ y: 0 }}
+                exit={{ y: 100 }}
+                className="bg-white rounded-t-[36px] w-full max-h-[92%] overflow-y-auto p-6 space-y-5 border-t-4 border-[#2563EB] text-left"
+              >
+                {/* Header */}
+                <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                  <div className="space-y-0.5">
+                    <h3 className="text-xl font-extrabold text-[#1E3A8A] flex items-center gap-2">
+                      <Volume2 className="w-5 h-5" />
+                      <span>{lang === 'it' ? "Importatore Suoni Vocali" : "Voice Sounds Importer"}</span>
+                    </h3>
+                    <p className="text-3xs text-gray-500 font-bold uppercase tracking-wider">
+                      {lang === 'it' ? "Personalizza le sveglie del dispositivo" : "Customize device alarm alerts"}
+                    </p>
+                  </div>
+                  
+                  <button
+                    id="close-import-sounds-btn"
+                    onClick={() => setShowImportSoundsModal(false)}
+                    className="text-gray-400 hover:text-gray-600 font-extrabold text-lg p-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Info Text */}
+                <div className="text-xs text-slate-600 leading-relaxed font-semibold bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                  {lang === 'it' ? (
+                    "I browser moderni e le Webview di Android richiedono autorizzazioni esplicite. Invece di far comparire fastidiosi errori nativi del sistema, MediVoce ti consente di caricare direttamente le tue suonerie preferite o attivare suoni integrati ad alta efficacia."
+                  ) : (
+                    "Modern browsers and Android Webviews require strict user permissions. To prevent system dialog errors, MediVoce allows you to upload custom ringtones directly or use pre-configured high-efficiency system alarms."
+                  )}
+                </div>
+
+                {/* Upload File Input Section */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-black text-[#1E293B] uppercase tracking-wide">
+                    {lang === 'it' ? "1. Carica File Audio dal Telefono" : "1. Upload Audio File from Phone"}
+                  </h4>
+                  <div className="relative border-2 border-dashed border-[#E2E8F0] hover:border-[#2563EB] transition-all rounded-2xl p-6 bg-slate-50/50 flex flex-col items-center justify-center gap-2 text-center cursor-pointer">
+                    <input
+                      id="native-audio-file-input"
+                      type="file"
+                      accept="audio/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 1.5 * 1024 * 1024) {
+                          alert(lang === 'it' ? "File troppo grande! Seleziona una notifica corta sotto 1.5MB." : "File too large! Select a short notification under 1.5MB.");
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const dataUrl = event.target?.result as string;
+                          const cleanName = file.name.replace(/\.[^/.]+$/, "");
+                          const newSound = {
+                            id: Date.now().toString(),
+                            name: cleanName,
+                            dataUrl: dataUrl
+                          };
+                          setImportedSounds(prev => [...prev, newSound]);
+                          // Auto trigger to let them hear it
+                          setTimeout(() => {
+                            playAlarmTone('custom_' + newSound.id);
+                          }, 100);
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                      <Volume2 className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-black text-[#1E293B] block">
+                        {lang === 'it' ? "Premi qui per selezionare" : "Tap here to select file"}
+                      </span>
+                      <span className="text-3xs text-gray-500 font-bold block">
+                        {lang === 'it' ? "Supporta MP3, WAV, OGG, M4A (Max 1.5MB)" : "Supports MP3, WAV, OGG, M4A (Max 1.5MB)"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Load System Presets Section */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-black text-[#1E293B] uppercase tracking-wide">
+                    {lang === 'it' ? "2. Oppure attiva Suoni di Sistema Predefiniti" : "2. Or import System Sound Presets"}
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'preset_arpeggio', name: lang === 'it' ? 'Arpeggio Zen' : 'Arpeggio Zen', desc: lang === 'it' ? 'Rilassante e fluido' : 'Relaxing & fluid' },
+                      { id: 'preset_marimba', name: lang === 'it' ? 'Marimba Allegra' : 'Bouncy Marimba', desc: lang === 'it' ? 'Vivace e chiaro' : 'Cheerful & clear' },
+                      { id: 'preset_trillo', name: lang === 'it' ? 'Trillo Notifica' : 'Sweet Chimes', desc: lang === 'it' ? 'Rapido e squillante' : 'Rapid & bright' }
+                    ].map((preset) => {
+                      const isAlreadyAdded = importedSounds.some(s => s.id === preset.id);
+                      return (
+                        <div
+                          key={preset.id}
+                          className="p-3 rounded-xl border border-[#E2E8F0] bg-white flex flex-col justify-between gap-2 text-left"
+                        >
+                          <div>
+                            <span className="text-xs font-extrabold text-[#1E293B] block">{preset.name}</span>
+                            <span className="text-3xs text-gray-500 font-bold block">{preset.desc}</span>
+                          </div>
+                          <div className="flex gap-1.5 mt-1">
+                            <button
+                              id={`test-preset-${preset.id}`}
+                              type="button"
+                              onClick={() => playAlarmTone(preset.id)}
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-3xs font-extrabold text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                              🔊 {lang === 'it' ? "Ascolta" : "Test"}
+                            </button>
+                            <button
+                              id={`import-preset-${preset.id}`}
+                              type="button"
+                              disabled={isAlreadyAdded}
+                              onClick={() => {
+                                const newSound = {
+                                  id: preset.id,
+                                  name: preset.name,
+                                  dataUrl: 'preset' // flag to use preset synthesizer
+                                };
+                                setImportedSounds(prev => [...prev, newSound]);
+                              }}
+                              className={`flex-1 px-2.5 py-1.5 rounded-lg text-3xs font-black text-center transition-all ${
+                                isAlreadyAdded
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 cursor-not-allowed'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                              }`}
+                            >
+                              {isAlreadyAdded ? (lang === 'it' ? "Attivo ✓" : "Active ✓") : (lang === 'it' ? "Importa" : "Import")}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* List of Custom Imported Sounds */}
+                <div className="space-y-2 pt-1">
+                  <h4 className="text-xs font-black text-[#1E293B] uppercase tracking-wide flex justify-between items-center">
+                    <span>{lang === 'it' ? "I Tuoi Suoni Personalizzati" : "Your Imported Sounds"}</span>
+                    <span className="text-3xs text-gray-400 font-bold">({importedSounds.length} caricati)</span>
+                  </h4>
+                  {importedSounds.length === 0 ? (
+                    <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-2xl text-xs text-gray-400 font-bold">
+                      {lang === 'it' ? "Nessun suono personalizzato aggiunto." : "No custom sounds added yet."}
+                    </div>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                      {importedSounds.map((sound) => (
+                        <div
+                          key={sound.id}
+                          className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">🎵</span>
+                            <span className="text-xs font-bold text-slate-700 truncate">{sound.name}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              id={`play-custom-sound-btn-${sound.id}`}
+                              type="button"
+                              onClick={() => playAlarmTone('custom_' + sound.id)}
+                              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-100 text-[#2563EB] text-xs transition-colors"
+                              title={lang === 'it' ? "Riproduci suono" : "Play sound"}
+                            >
+                              🔊
+                            </button>
+                            <button
+                              id={`delete-custom-sound-btn-${sound.id}`}
+                              type="button"
+                              onClick={() => {
+                                setImportedSounds(prev => prev.filter(s => s.id !== sound.id));
+                              }}
+                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 text-xs transition-colors"
+                              title={lang === 'it' ? "Elimina suono" : "Delete sound"}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions Footer */}
+                <div className="pt-2">
+                  <button
+                    id="finish-import-sounds-btn"
+                    onClick={() => setShowImportSoundsModal(false)}
+                    className="w-full py-3 bg-[#1E293B] hover:bg-[#0F172A] text-white font-black text-sm rounded-xl shadow-md transition-colors"
+                  >
+                    {lang === 'it' ? "Fatto" : "Done"}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
 

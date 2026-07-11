@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.medivoce"
+    namespace = "com.example.medivoceapp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.medivoce"
+        applicationId = "com.example.medivoceapp"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

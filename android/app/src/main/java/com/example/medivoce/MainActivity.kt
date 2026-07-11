@@ -145,6 +145,13 @@ class MainActivity : AppCompatActivity() {
             scheduler.cancelAlarm(id)
             Log.d(TAG_NATIVE, "Cancelled alarm $id")
         }
+
+        @JavascriptInterface
+        fun saveAlarmsToNative(alarmsJson: String) {
+            val prefs = appContext.getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("active_alarms", alarmsJson).apply()
+            Log.d(TAG_NATIVE, "Saved alarms to native storage: $alarmsJson")
+        }
     }
 }
 

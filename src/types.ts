@@ -19,6 +19,7 @@ export interface Medication {
   history: { [dateStr: string]: boolean }; // e.g. "2026-06-10": true (taken)
   audioTone: string; // 'tranquillo' | 'campana' | 'sirena' | 'standard'
   voicePrompt: string; // custom empathetic speech prompt
+  nativeId?: number; // Unique 32-bit integer for Android AlarmManager
 }
 
 export interface DoctorNote {
@@ -146,7 +147,7 @@ export const TRANSLATIONS: Record<LanguageCode, {
     cancel: "Annulla",
     confirmTaken: "Hai preso la medicina?",
     takenBtn: "Presa",
-    pendingBtn: "Pendente",
+    pendingBtn: "CONFERMA",
     speakAlert: "Sveglia Vocale",
     testVoiceSettings: "Impostazioni e Prova Voce",
     testVoiceBtn: "Ascolta Prova Voce",

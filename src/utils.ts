@@ -21,6 +21,130 @@ export function playAlarmTone(toneType: string) {
 
     const now = audioCtx.currentTime;
 
+    // Check if it's an imported custom sound from localStorage
+    if (toneType && toneType.startsWith('custom_')) {
+      const soundId = toneType.replace('custom_', '');
+      
+      // Preset check
+      if (soundId === 'preset_arpeggio') {
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx!.createOscillator();
+          const gain = audioCtx!.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+          gain.gain.setValueAtTime(0.6, now + idx * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.15 + 0.4);
+          osc.connect(gain);
+          gain.connect(audioCtx!.destination);
+          osc.start(now + idx * 0.15);
+          osc.stop(now + idx * 0.15 + 0.4);
+        });
+        return;
+      }
+      
+      if (soundId === 'preset_marimba') {
+        const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx!.createOscillator();
+          const gain = audioCtx!.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+          gain.gain.setValueAtTime(0.7, now + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+          osc.connect(gain);
+          gain.connect(audioCtx!.destination);
+          osc.start(now + idx * 0.12);
+          osc.stop(now + idx * 0.12 + 0.3);
+        });
+        return;
+      }
+
+      if (soundId === 'preset_trillo') {
+        for (let i = 0; i < 4; i++) {
+          const osc = audioCtx!.createOscillator();
+          const gain = audioCtx!.createGain();
+          osc.type = 'sine';
+          const freq = i % 2 === 0 ? 880 : 987.77; // A5 vs B5 rapid alternation
+          osc.frequency.setValueAtTime(freq, now + i * 0.08);
+          gain.gain.setValueAtTime(0.5, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.12);
+          osc.connect(gain);
+          gain.connect(audioCtx!.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.12);
+        }
+        return;
+      }
+
+      const savedSounds = localStorage.getItem('medivoce_custom_sounds');
+      if (savedSounds) {
+        try {
+          const parsed = JSON.parse(savedSounds);
+          const match = parsed.find((s: any) => s.id === soundId);
+          if (match && match.dataUrl) {
+            const audio = new Audio(match.dataUrl);
+            audio.play().catch(e => console.error("Error playing custom loaded sound:", e));
+            return;
+          }
+        } catch (err) {
+          console.error("Error parsing custom sounds for playback:", err);
+        }
+      }
+    }
+
+    // Direct preset check
+    if (toneType === 'preset_arpeggio' || toneType === 'custom_preset_arpeggio') {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const osc = audioCtx!.createOscillator();
+        const gain = audioCtx!.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+        gain.gain.setValueAtTime(0.6, now + idx * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.15 + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx!.destination);
+        osc.start(now + idx * 0.15);
+        osc.stop(now + idx * 0.15 + 0.4);
+      });
+      return;
+    }
+
+    if (toneType === 'preset_marimba' || toneType === 'custom_preset_marimba') {
+      const notes = [440, 554.37, 659.25, 880];
+      notes.forEach((freq, idx) => {
+        const osc = audioCtx!.createOscillator();
+        const gain = audioCtx!.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+        gain.gain.setValueAtTime(0.7, now + idx * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx!.destination);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.3);
+      });
+      return;
+    }
+
+    if (toneType === 'preset_trillo' || toneType === 'custom_preset_trillo') {
+      for (let i = 0; i < 4; i++) {
+        const osc = audioCtx!.createOscillator();
+        const gain = audioCtx!.createGain();
+        osc.type = 'sine';
+        const freq = i % 2 === 0 ? 880 : 987.77;
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+        gain.gain.setValueAtTime(0.5, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx!.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.12);
+      }
+      return;
+    }
+
     if (toneType === 'campana') {
       // Louder, richer bell sound
       const osc1 = audioCtx.createOscillator();
@@ -132,94 +256,126 @@ export function speakAnnouncement(
     return;
   }
 
-  // Cancel any currently speaking alerts
-  window.speechSynthesis.cancel();
+  try {
+    // Wake up speech synthesis in case it's in a paused state (very common on mobile)
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  
-  // Set appropriate language locale
-  let targetLocale = 'it-IT';
-  let langPrefix = 'it';
-  
-  if (lang === 'es') {
-    targetLocale = 'es-ES';
-    langPrefix = 'es';
-  } else if (lang === 'fr') {
-    targetLocale = 'fr-FR';
-    langPrefix = 'fr';
-  } else if (lang === 'en') {
-    targetLocale = 'en-US';
-    langPrefix = 'en';
-  } else {
-    targetLocale = 'it-IT';
-    langPrefix = 'it';
-  }
+    // Cancel any currently speaking alerts
+    window.speechSynthesis.cancel();
 
-  utterance.lang = targetLocale;
-
-  // Customize velocity & vocal resonance
-  utterance.rate = speed;
-  
-  if (toneType === 'empathetic') {
-    utterance.pitch = 1.25; // slightly higher, warmer and sweeter, also helps force female pitch on ambiguous voices
-  } else {
-    utterance.pitch = 1.1; // a bit more authoritative but still feminine range
-  }
-
-  // Try to find a warm, high-quality human-sounding female voice
-  const allVoices = window.speechSynthesis.getVoices();
-  const langVoices = allVoices.filter(v => {
-    const LowerLang = v.lang.toLowerCase().replace('_', '-');
-    return LowerLang.startsWith(langPrefix);
-  });
-
-  if (langVoices.length > 0) {
-    // List of common female, natural, or premium voice descriptors
-    const femaleKeywords = [
-      'female', 'donna', 'femme', 'mujer', 'elsa', 'paola', 'sonia', 'alice', 
-      'samantha', 'victoria', 'zira', 'hazel', 'susan', 'karen', 'moira', 'tessa', 
-      'helena', 'sabina', 'hortense', 'julie', 'pauline', 'clara', 'laura', 'silvia', 
-      'giulia', 'melina', 'paula', 'cosmia', 'rosa', 'chiara', 'bianca', 'luciana', 'carmela'
-    ];
+    // Set appropriate language locale
+    let targetLocale = 'it-IT';
+    let langPrefix = 'it';
     
-    const maleNames = ['david', 'george', 'cosimo', 'mark', 'ravi', 'sean', 'guy', 'uomo', 'stefano', 'male', 'luca', 'diego', 'pablo', 'thomas', 'arthur', 'jacques', 'paul', 'martin', 'daniel', 'rocco', 'bernard', 'gabriel', 'jorge', 'piero', 'giovanni', 'mario'];
+    if (lang === 'es') {
+      targetLocale = 'es-ES';
+      langPrefix = 'es';
+    } else if (lang === 'fr') {
+      targetLocale = 'fr-FR';
+      langPrefix = 'fr';
+    } else if (lang === 'en') {
+      targetLocale = 'en-US';
+      langPrefix = 'en';
+    } else {
+      targetLocale = 'it-IT';
+      langPrefix = 'it';
+    }
 
-    // Priority 1: explicitly Female voices
-    let selectedVoice = langVoices.find(v => {
-      const nameLower = v.name.toLowerCase();
-      return femaleKeywords.some(kw => nameLower.includes(kw));
-    });
+    // Use a small setTimeout (80ms) before speaking. This is an essential workaround for Chrome on Android 
+    // and mobile webviews where calling cancel() and speak() synchronously in the same frame cancels the new utterance.
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = targetLocale;
 
-    // Priority 2: Not explicitly male voices, preferring Google/Network voices (often female by default)
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => {
-        const nameLower = v.name.toLowerCase();
-        const isNotMale = !maleNames.some(kw => nameLower.includes(kw));
-        const isGoogle = nameLower.includes('google') || nameLower.includes('network');
-        return isNotMale && isGoogle;
+      // Customize velocity & vocal resonance
+      utterance.rate = speed;
+      
+      if (toneType === 'empathetic') {
+        utterance.pitch = 1.25; // slightly higher, warmer and sweeter, also helps force female pitch on ambiguous voices
+      } else {
+        utterance.pitch = 1.1; // a bit more authoritative but still feminine range
+      }
+
+      // Try to find a warm, high-quality human-sounding female voice
+      const allVoices = window.speechSynthesis.getVoices();
+      const langVoices = allVoices.filter(v => {
+        const LowerLang = v.lang.toLowerCase().replace('_', '-');
+        return LowerLang.startsWith(langPrefix);
       });
-    }
 
-    // Priority 3: Avoid known male names
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => {
-        const nameLower = v.name.toLowerCase();
-        return !maleNames.some(kw => nameLower.includes(kw));
-      });
-    }
+      if (langVoices.length > 0) {
+        // List of common female, natural, or premium voice descriptors
+        const femaleKeywords = [
+          'female', 'donna', 'femme', 'mujer', 'elsa', 'paola', 'sonia', 'alice', 
+          'samantha', 'victoria', 'zira', 'hazel', 'susan', 'karen', 'moira', 'tessa', 
+          'helena', 'sabina', 'hortense', 'julie', 'pauline', 'clara', 'laura', 'silvia', 
+          'giulia', 'melina', 'paula', 'cosmia', 'rosa', 'chiara', 'bianca', 'luciana', 'carmela'
+        ];
+        
+        const maleNames = ['david', 'george', 'cosimo', 'mark', 'ravi', 'sean', 'guy', 'uomo', 'stefano', 'male', 'luca', 'diego', 'pablo', 'thomas', 'arthur', 'jacques', 'paul', 'martin', 'daniel', 'rocco', 'bernard', 'gabriel', 'jorge', 'piero', 'giovanni', 'mario'];
 
-    // Fallback: Use the first available voice for the target language (hoping it's female)
-    if (!selectedVoice) {
-      selectedVoice = langVoices[0];
-    }
+        // Priority 1: explicitly Female voices that are LOCAL (extremely reliable offline, won't fail silently)
+        let selectedVoice = langVoices.find(v => {
+          const nameLower = v.name.toLowerCase();
+          return femaleKeywords.some(kw => nameLower.includes(kw)) && v.localService;
+        });
 
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      console.log(`[MediVoce] Selected female speech voice: ${selectedVoice.name} (${selectedVoice.lang})`);
-    }
+        // Priority 2: explicitly Female voices (even if network/Google)
+        if (!selectedVoice) {
+          selectedVoice = langVoices.find(v => {
+            const nameLower = v.name.toLowerCase();
+            return femaleKeywords.some(kw => nameLower.includes(kw));
+          });
+        }
+
+        // Priority 3: Not explicitly male voices, preferring local
+        if (!selectedVoice) {
+          selectedVoice = langVoices.find(v => {
+            const nameLower = v.name.toLowerCase();
+            const isNotMale = !maleNames.some(kw => nameLower.includes(kw));
+            return isNotMale && v.localService;
+          });
+        }
+
+        // Priority 4: First available local voice
+        if (!selectedVoice) {
+          selectedVoice = langVoices.find(v => v.localService);
+        }
+
+        // Fallback: Use the first available voice for the target language (hoping it's female)
+        if (!selectedVoice) {
+          selectedVoice = langVoices[0];
+        }
+
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+          console.log(`[MediVoce] Selected female speech voice: ${selectedVoice.name} (Local: ${selectedVoice.localService}, Lang: ${selectedVoice.lang})`);
+        }
+      }
+
+      // Add Error Handler to fallback to system default voice if selected voice fails (e.g. Google network voices offline)
+      utterance.onerror = (err) => {
+        console.error('[MediVoce] SpeechSynthesis error:', err.error);
+        if (utterance.voice) {
+          console.warn('[MediVoce] Selected voice failed. Retrying with system default...');
+          const fallbackUtterance = new SpeechSynthesisUtterance(text);
+          fallbackUtterance.lang = targetLocale;
+          fallbackUtterance.rate = speed;
+          fallbackUtterance.pitch = toneType === 'empathetic' ? 1.25 : 1.1;
+          fallbackUtterance.onerror = (e) => console.error('[MediVoce] Fallback speech error:', e.error);
+          window.speechSynthesis.speak(fallbackUtterance);
+        }
+      };
+
+      // Speak!
+      window.speechSynthesis.speak(utterance);
+    }, 80);
+
+  } catch (error) {
+    console.error('[MediVoce] Exception during speakAnnouncement:', error);
   }
-
-  window.speechSynthesis.speak(utterance);
 }
 
 export function getLocalIsoDate(date: Date = new Date()): string {
