@@ -110,6 +110,7 @@ export const TRANSLATIONS: Record<LanguageCode, {
   darkTheme: string;
   warmTheme: string;
   alwaysOnSetting: string;
+  voiceAnnounceSetting: string;
   privacyPolicy: string;
   privacyText: string;
   medicalDisclaimer: string;
@@ -195,6 +196,7 @@ export const TRANSLATIONS: Record<LanguageCode, {
     darkTheme: "Scuro",
     warmTheme: "Caldo",
     alwaysOnSetting: "Display Attivo alla Notifica",
+    voiceAnnounceSetting: "Notifiche Vocali Attive (Sintesi Vocale)",
     privacyPolicy: "Informativa sulla Privacy",
     privacyText: "Privacy Policy Lineare: L'app opera esclusivamente in modalità locale, non ha database remoti e non traccia in alcun modo le abitudini dell'utente.",
     medicalDisclaimer: "Attenzione: Quest'app è solo un promemoria e non sostituisce in alcun modo il parere, la diagnosi o il consiglio del proprio medico curante o del farmacista.",
@@ -280,6 +282,7 @@ export const TRANSLATIONS: Record<LanguageCode, {
     darkTheme: "Dark",
     warmTheme: "Warm",
     alwaysOnSetting: "Keep Display On for Notifications",
+    voiceAnnounceSetting: "Enable Voice Announcements (Text-to-Speech)",
     privacyPolicy: "Privacy Policy",
     privacyText: "Linear Privacy Policy: The app operates entirely locally, has no remote databases, and does not track user habits in any way.",
     medicalDisclaimer: "Warning: This app is solely a reminder tool and does not substitute medical or pharmacological advice, diagnosis, or recommendations.",
@@ -365,6 +368,7 @@ export const TRANSLATIONS: Record<LanguageCode, {
     darkTheme: "Oscuro",
     warmTheme: "Cálido",
     alwaysOnSetting: "Mantener Pantalla Encendida para Notificaciones",
+    voiceAnnounceSetting: "Habilitar Anuncios Vocales (Síntesis de Voz)",
     privacyPolicy: "Política de Privacidad",
     privacyText: "Política de Privacidad Lineal: La aplicación funciona exclusivamente en modo local, no tiene bases de datos remotas y no rastrea los hábitos del usuario.",
     medicalDisclaimer: "Advertencia: Esta aplicación es solo un recordatorio y no sustituye de ninguna manera el consejo, diagnóstico o recomendación de un médico o farmacéutico.",
@@ -450,6 +454,7 @@ export const TRANSLATIONS: Record<LanguageCode, {
     darkTheme: "Sombre",
     warmTheme: "Chaud",
     alwaysOnSetting: "Garder l'Écran Allumé pour les Notifications",
+    voiceAnnounceSetting: "Activer les Rappels Vocaux (Synthèse Vocale)",
     privacyPolicy: "Politique de Confidentialité",
     privacyText: "Politique de Confidentialité Linéaire : L'application fonctionne exclusivement en mode local, n'a pas de bases de données distantes et ne suit pas les habitudes des utilisateurs.",
     medicalDisclaimer: "Avertissement : Cette application n'est qu'un simple rappel et ne remplace en aucun cas les conseils, diagnostics ou recommandations d'un médecin ou d'un pharmacien.",

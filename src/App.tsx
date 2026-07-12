@@ -295,6 +295,10 @@ export default function App() {
   const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
     return localStorage.getItem('medivoce_vibration') !== 'false'; // true by default
   });
+
+  const [voiceAnnounceEnabled, setVoiceAnnounceEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('medivoce_voice_announce') !== 'false'; // true by default
+  });
   
   const [appTheme, setAppTheme] = useState<'light' | 'dark' | 'warm'>(() => {
     return (localStorage.getItem('medivoce_theme') as 'light' | 'dark' | 'warm') || 'light';
@@ -352,6 +356,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('medivoce_vibration', vibrationEnabled.toString());
   }, [vibrationEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('medivoce_voice_announce', voiceAnnounceEnabled.toString());
+  }, [voiceAnnounceEnabled]);
 
   useEffect(() => {
     localStorage.setItem('medivoce_theme', appTheme);
@@ -635,11 +643,13 @@ export default function App() {
       navigator.vibrate([500, 200, 500, 200, 1000]); // generic pulse
     }
     
-    // Speak custom customized script with TTS
-    const textToSpeak = med.voicePrompt || `${t.speakAlert}: ${med.name}. ${med.dosage}. ${med.notes}`;
-    setTimeout(() => {
-      speakAnnouncement(textToSpeak, lang, speechSpeed, speechTone);
-    }, 50);
+    // Speak custom customized script with TTS if enabled
+    if (voiceAnnounceEnabled) {
+      const textToSpeak = med.voicePrompt || `${t.speakAlert}: ${med.name}. ${med.dosage}. ${med.notes}`;
+      setTimeout(() => {
+        speakAnnouncement(textToSpeak, lang, speechSpeed, speechTone);
+      }, 50);
+    }
   };
 
   // Microphone confirm: speech recognition says "Preso" / "Si" to close alert
@@ -1400,6 +1410,18 @@ export default function App() {
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${alwaysOnDisplay ? theme.primary : 'bg-[#333]'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${alwaysOnDisplay ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+
+                  {/* Voice Announcements Toggle */}
+                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-[#F1F5F9]">
+                    <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.voiceAnnounceSetting}</span>
+                    <button 
+                      id="toggle-voice-announcements"
+                      onClick={() => setVoiceAnnounceEnabled(!voiceAnnounceEnabled)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${voiceAnnounceEnabled ? theme.primary : 'bg-[#333]'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${voiceAnnounceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
                 </div>

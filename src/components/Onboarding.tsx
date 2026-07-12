@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TRANSLATIONS, LanguageCode } from '../types';
 import { speakAnnouncement } from '../utils';
-import { Globe, ArrowRight, Volume2, ShieldCheck, Camera, MapPin } from 'lucide-react';
+import { Globe, ArrowRight, Volume2, ShieldCheck, Camera, MapPin, Settings, Battery, Eye, Bell, Check } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (lang: LanguageCode) => void;
@@ -30,7 +30,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const nextStep = () => {
-    if (step < 3) {
+    if (step < 4) {
       const nextS = step + 1;
       setStep(nextS);
       speakCurrentStepInfo(lang, nextS);
@@ -246,6 +246,135 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   </div>
                 </motion.div>
               )}
+
+              {step === 4 && (
+                <motion.div
+                  key="step4"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4 text-left"
+                >
+                  <div className="text-center space-y-2 mb-4">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100">
+                      <Settings className="w-8 h-8 animate-spin-slow" />
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-[#1E3A8A]">
+                      {lang === 'it' 
+                        ? 'Configurazione Android Necessaria' 
+                        : lang === 'es'
+                        ? 'Configuración de Android Necesaria'
+                        : lang === 'fr'
+                        ? 'Configuration Android Nécessaire'
+                        : 'Android Configuration Required'}
+                    </h2>
+                    <p className="text-xs text-[#64748B] font-medium leading-relaxed">
+                      {lang === 'it'
+                        ? "Per garantire che l'allarme vocale suoni con precisione all'orario impostato, anche da telefono bloccato o app chiusa, configura ora queste impostazioni:"
+                        : "To ensure the voice alarm sounds exactly at the scheduled time, even when your phone is locked or the app is closed, please configure these settings now:"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 max-h-[38vh] overflow-y-auto pr-1">
+                    {/* Item 1 */}
+                    <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 shrink-0 border border-blue-100 text-xs font-extrabold">
+                        1
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
+                          <Bell className="w-4 h-4 text-blue-500 shrink-0" />
+                          {lang === 'it' ? 'Sveglie Precise (Alarms & Reminders)' : 'Precise Alarms & Reminders'}
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
+                          {lang === 'it' ? (
+                            <>
+                              Vai in <strong className="text-blue-600 font-bold">Impostazioni del Telefono &rarr; App &rarr; Accesso speciale alle app &rarr; Sveglie e promemoria</strong>. Cerca <strong className="text-blue-600 font-bold">MediVoce</strong> e assicurati che la spunta sia <strong className="text-emerald-600 font-bold">ATTIVA</strong>.
+                            </>
+                          ) : (
+                            <>
+                              Go to <strong className="text-blue-600 font-bold">Settings &rarr; Apps &rarr; Special App Access &rarr; Alarms & Reminders</strong>. Find <strong className="text-blue-600 font-bold">MediVoce</strong> and make sure it is <strong className="text-emerald-600 font-bold">ENABLED</strong>.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Item 2 */}
+                    <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 shrink-0 border border-amber-100 text-xs font-extrabold">
+                        2
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
+                          <Battery className="w-4 h-4 text-amber-500 shrink-0" />
+                          {lang === 'it' ? 'Escludi dall\'Ottimizzazione Batteria' : 'Disable Battery Optimization'}
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
+                          {lang === 'it' ? (
+                            <>
+                              Vai in <strong className="text-amber-600 font-bold">Impostazioni del Telefono &rarr; App &rarr; MediVoce &rarr; Batteria</strong>. Imposta su <strong className="text-amber-600 font-bold">"Senza restrizioni"</strong> (o disattiva l'ottimizzazione energetica per questa app). Questo impedirà ad Android di chiudere l'app in background o standby.
+                            </>
+                          ) : (
+                            <>
+                              Go to <strong className="text-amber-600 font-bold">Settings &rarr; Apps &rarr; MediVoce &rarr; Battery</strong>. Set to <strong className="text-amber-600 font-bold">"Unrestricted"</strong>. This prevents Android from killing the app in background or standby.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Item 3 */}
+                    <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 shrink-0 border border-purple-100 text-xs font-extrabold">
+                        3
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
+                          <Eye className="w-4 h-4 text-purple-500 shrink-0" />
+                          {lang === 'it' ? 'Mostra sopra altre app / Schermata di Blocco' : 'Display Over Other Apps / Lock Screen'}
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
+                          {lang === 'it' ? (
+                            <>
+                              Per far sì che l'allarme a tutto schermo (rosso con i comandi vocali) appaia anche a telefono bloccato, attiva il permesso <strong className="text-purple-600 font-bold">"Mostra sopra altre app"</strong> o <strong className="text-purple-600 font-bold">"Visualizza sulla schermata di blocco"</strong> nelle impostazioni dei permessi dell'app.
+                            </>
+                          ) : (
+                            <>
+                              To let the full-screen red voice alarm appear even when locked, enable <strong className="text-purple-600 font-bold">"Display over other apps"</strong> or <strong className="text-purple-600 font-bold">"Show on lock screen"</strong> in the app's permission settings.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Item 4 */}
+                    <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 shrink-0 border border-emerald-100 text-xs font-extrabold">
+                        4
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
+                          <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                          {lang === 'it' ? 'Consenti Notifiche' : 'Allow Notifications'}
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
+                          {lang === 'it' ? (
+                            <>
+                              Al primo avvio, assicurati di <strong className="text-emerald-600 font-bold">accettare la richiesta di invio delle notifiche</strong> per essere avvisato tempestivamente.
+                            </>
+                          ) : (
+                            <>
+                              Upon first launch, ensure you <strong className="text-emerald-600 font-bold">accept the push notification prompt</strong> to receive timely medication alerts.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           </main>
         </div>
@@ -258,7 +387,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             {/* Progress Dots */}
             {step >= 0 && (
               <div className="flex justify-center gap-2">
-                {[0, 1, 2, 3].map((idx) => (
+                {[0, 1, 2, 3, 4].map((idx) => (
                   <div
                     key={idx}
                     className={`h-2 rounded-full transition-all duration-300 ${
@@ -296,7 +425,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   onClick={nextStep}
                   className={`${step > 0 ? 'w-2/3' : 'w-full'} py-3.5 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-black flex items-center justify-center gap-2 shadow-md transition-all text-base sm:text-lg`}
                 >
-                  <span>{step === 3 ? t.buttonFinish : t.buttonNext}</span>
+                  <span>{step === 4 ? t.buttonFinish : t.buttonNext}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               )}
