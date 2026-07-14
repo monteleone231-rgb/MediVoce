@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TRANSLATIONS, LanguageCode } from '../types';
 import { speakAnnouncement } from '../utils';
-import { Globe, ArrowRight, Volume2, ShieldCheck, Camera, MapPin, Settings, Battery, Eye, Bell, Check } from 'lucide-react';
+import { Globe, ArrowRight, Volume2, ShieldCheck, Music, MapPin, Settings, Battery, Eye, Bell, Check } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (lang: LanguageCode) => void;
@@ -208,8 +208,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   transition={{ duration: 0.3 }}
                   className="space-y-6 text-center"
                 >
-                  <div className="mx-auto w-20 h-20 rounded-full bg-[#ECFDF5] flex items-center justify-center text-[#10B981] border border-[#A7F3D0]">
-                    <Camera className="w-10 h-10" />
+                  <div className="mx-auto w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center text-[#4F46E5] border border-indigo-100">
+                    <Music className="w-10 h-10" />
                   </div>
 
                   <div className="space-y-3">

@@ -20,7 +20,7 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent?.action
         Log.d(TAG, "onReceive: Boot event detected with action=$action")
 
-        if (action in BOOT_ACTIONS) {
+        if (action in bootActions) {
             Log.i(TAG, "MediVoce: System restarted. Re-scheduling active medication reminders...")
             rescheduleAlarms(context)
         }
@@ -77,7 +77,7 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private val BOOT_ACTIONS = setOf(
+        private val bootActions = setOf(
             Intent.ACTION_BOOT_COMPLETED,
             "android.intent.action.QUICKBOOT_POWERON", // HTC / older devices quick boot
             "com.htc.intent.action.QUICKBOOT_POWERON"

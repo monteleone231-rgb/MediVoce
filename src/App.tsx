@@ -9,14 +9,13 @@ import {
   Heart, Plus, Pill, Award, Globe, MapPin, 
   Settings, CheckCircle, Volume2, 
   AlertTriangle, Mic, Clock, Camera, Calendar, 
-  Smartphone, Bell, Sparkles, Phone, FileText, ChevronRight, ChevronDown, Coffee
+  Smartphone, Bell, Sparkles, Phone, FileText, ChevronRight, ChevronDown, Coffee, Search
 } from 'lucide-react';
 import { IT, US, ES, FR } from 'country-flag-icons/react/3x2';
 
 import { LanguageCode, Medication, MedicationCategory, DoctorNote, TRANSLATIONS } from './types';
 import { playAlarmTone, speakAnnouncement, BARCODE_MOCK_DATABASE, getLocalIsoDate } from './utils';
 import Onboarding from './components/Onboarding';
-import BarcodeScanner from './components/BarcodeScanner';
 import PharmacyLocator from './components/PharmacyLocator';
 import HistoryAndNotes from './components/HistoryAndNotes';
 
@@ -278,11 +277,14 @@ export default function App() {
   const [formName, setFormName] = useState<string>('');
   const [formDosage, setFormDosage] = useState<string>('');
   const [formTime, setFormTime] = useState<string>('08:00');
+  const [formTimes, setFormTimes] = useState<string[]>(['08:00']);
   const [formNotes, setFormNotes] = useState<string>('');
   const [formCategory, setFormCategory] = useState<MedicationCategory>('pill');
   const [formSchedule, setFormSchedule] = useState<number[]>([1, 2, 3, 4, 5, 6, 0]); // Default daily
   const [formVoicePrompt, setFormVoicePrompt] = useState<string>('');
   const [formAudioTone, setFormAudioTone] = useState<string>('standard');
+  const [activeVoiceReminderSlot, setActiveVoiceReminderSlot] = useState<string | null>(null);
+  const [medsSearchQuery, setMedsSearchQuery] = useState<string>('');
 
   // Barcode camera view trigger
   const [showScanner, setShowScanner] = useState<boolean>(false);
@@ -320,6 +322,48 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [showImportSoundsModal, setShowImportSoundsModal] = useState<boolean>(false);
+  const [deviceRingtones, setDeviceRingtones] = useState<{ title: string; uri: string }[]>([]);
+  const [currentlyPlayingUri, setCurrentlyPlayingUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showImportSoundsModal) {
+      const android = (window as any).Android;
+      if (android && android.getDeviceSounds) {
+        try {
+          const soundsStr = android.getDeviceSounds();
+          if (soundsStr) {
+            const parsed = JSON.parse(soundsStr);
+            if (Array.isArray(parsed)) {
+              setDeviceRingtones(parsed);
+            }
+          }
+        } catch (e) {
+          console.error("Error fetching device sounds:", e);
+        }
+      } else {
+        // Fallback for browser testing
+        setDeviceRingtones([
+          { title: "Breeze Chime", uri: "device_uri_breeze" },
+          { title: "Dew Drop", uri: "device_uri_dew" },
+          { title: "Sunrise Alarm", uri: "device_uri_sunrise" },
+          { title: "Echo Echo", uri: "device_uri_echo" },
+          { title: "Sweet Organ", uri: "device_uri_organ" },
+          { title: "Classic Ding", uri: "device_uri_ding" }
+        ]);
+      }
+    } else {
+      // Stop device sound when modal closed
+      const android = (window as any).Android;
+      if (android && android.stopDeviceSound) {
+        try {
+          android.stopDeviceSound();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setCurrentlyPlayingUri(null);
+    }
+  }, [showImportSoundsModal]);
 
   // Interactive speaking notification modal
   const [activeVoiceReminder, setActiveVoiceReminder] = useState<Medication | null>(null);
@@ -410,13 +454,20 @@ export default function App() {
       // System-wide standby checker: triggers if the time exactly matches the scheduled medication
       if (now.getSeconds() === 0) {
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const todayWeekdayVal = now.getDay();
         
         medications.forEach(med => {
-          if (med.isActive && med.time === timeString) {
-             const dateStr = getLocalIsoDate(now);
-             if (!(med.history || {})[dateStr] && activeVoiceReminder?.id !== med.id) {
-               console.log("[MediVoce] Auto-triggering scheduled dose:", med.name);
-               activateVoiceRemindSystem(med);
+          if (med.isActive && med.weeklySchedule.includes(todayWeekdayVal)) {
+             const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+             if (medTimes.includes(timeString)) {
+               const dateStr = getLocalIsoDate(now);
+               const slotKey = `${dateStr}_${timeString}`;
+               const isTaken = (med.history || {})[slotKey] === true || (medTimes.length === 1 && (med.history || {})[dateStr] === true);
+               
+               if (!isTaken && activeVoiceReminder?.id !== med.id) {
+                 console.log("[MediVoce] Auto-triggering scheduled dose:", med.name, "at", timeString);
+                 activateVoiceRemindSystem(med, timeString);
+               }
              }
           }
         });
@@ -430,62 +481,76 @@ export default function App() {
     // 1. Check if any medications are missing nativeId
     const missingNativeId = medications.some(m => !m.nativeId);
     if (missingNativeId) {
-      setMedications(prev => prev.map(m => {
-        if (!m.nativeId) {
-          return { ...m, nativeId: Math.floor(Math.random() * 10000000) };
-        }
-        return m;
-      }));
-      return; // The state update will trigger this useEffect again with complete nativeId list
+       setMedications(prev => prev.map(m => {
+         if (!m.nativeId) {
+           return { ...m, nativeId: Math.floor(Math.random() * 10000000) };
+         }
+         return m;
+       }));
+       return; // The state update will trigger this useEffect again with complete nativeId list
     }
 
     // 2. Perform native synchronization
     const android = (window as any).Android;
     if (android) {
-      console.log("[MediVoce] Synchronizing medications with native AlarmManager...");
-      
-      // Schedule or cancel each medication alarm
-      medications.forEach(med => {
-        const nativeId = med.nativeId!;
-        if (med.isActive) {
-          // Calculate next alarm time in milliseconds
-          const [hours, minutes] = med.time.split(':').map(Number);
-          const now = new Date();
-          const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-          
-          if (target.getTime() <= now.getTime()) {
-            target.setDate(target.getDate() + 1);
-          }
+       console.log("[MediVoce] Synchronizing medications with native AlarmManager...");
+       
+       // Schedule or cancel each medication alarm
+       medications.forEach(med => {
+         const nativeId = med.nativeId!;
+         const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+         
+         if (med.isActive) {
+           medTimes.forEach((timeSlot, idx) => {
+             const slotNativeId = nativeId + idx;
+             const [hours, minutes] = timeSlot.split(':').map(Number);
+             const now = new Date();
+             const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+             
+             if (target.getTime() <= now.getTime()) {
+               target.setDate(target.getDate() + 1);
+             }
 
-          try {
-            android.scheduleAlarm(target.getTime(), nativeId, med.name);
-            console.log(`[MediVoce] Native scheduled: ${med.name} (${nativeId}) at ${target.toISOString()}`);
-          } catch (e) {
-            console.error(`[MediVoce] Error scheduling ${med.name}:`, e);
-          }
-        } else {
-          try {
-            android.cancelAlarm(nativeId);
-            console.log(`[MediVoce] Native cancelled inactive: ${med.name} (${nativeId})`);
-          } catch (e) {
-            console.error(`[MediVoce] Error cancelling inactive ${med.name}:`, e);
-          }
-        }
-      });
+             try {
+               android.scheduleAlarm(target.getTime(), slotNativeId, med.name);
+               console.log(`[MediVoce] Native scheduled slot: ${med.name} at ${timeSlot} (${slotNativeId})`);
+             } catch (e) {
+               console.error(`[MediVoce] Error scheduling slot ${med.name} at ${timeSlot}:`, e);
+             }
+           });
+         } else {
+           // Cancel active slot alarms
+           for (let idx = 0; idx < 10; idx++) {
+             const slotNativeId = nativeId + idx;
+             try {
+               android.cancelAlarm(slotNativeId);
+             } catch (e) {
+               // ignore
+             }
+           }
+           console.log(`[MediVoce] Native cancelled all slots for: ${med.name}`);
+         }
+       });
 
-      // 3. Save serialized alarms list to native storage (SharedPreferences) for BootReceiver persistence
-      try {
-        const alarmsToSave = medications.map(m => ({
-          nativeId: m.nativeId,
-          name: m.name,
-          time: m.time,
-          isActive: m.isActive
-        }));
-        android.saveAlarmsToNative?.(JSON.stringify(alarmsToSave));
-        console.log("[MediVoce] Saved active alarms to native storage for BootReceiver.");
-      } catch (e) {
-        console.error("[MediVoce] Error saving alarms list to native storage:", e);
-      }
+       // 3. Save serialized alarms list to native storage (SharedPreferences) for BootReceiver persistence
+       try {
+         const alarmsToSave: any[] = [];
+         medications.forEach(m => {
+           const medTimes = m.times && m.times.length > 0 ? m.times : [m.time];
+           medTimes.forEach((timeSlot, idx) => {
+             alarmsToSave.push({
+               nativeId: m.nativeId! + idx,
+               name: m.name,
+               time: timeSlot,
+               isActive: m.isActive
+             });
+           });
+         });
+         android.saveAlarmsToNative?.(JSON.stringify(alarmsToSave));
+         console.log("[MediVoce] Saved active alarms to native storage for BootReceiver.");
+       } catch (e) {
+         console.error("[MediVoce] Error saving alarms list to native storage:", e);
+       }
     }
   }, [medications]);
 
@@ -521,6 +586,10 @@ export default function App() {
     e.preventDefault();
     if (!formName.trim()) return;
 
+    const validatedTimes = formTimes.filter(t => !!t.trim());
+    const finalTimes = validatedTimes.length > 0 ? validatedTimes : ['08:00'];
+    const finalPrimaryTime = finalTimes[0];
+
     if (isEditingId) {
       // Edit
       setMedications(prev => prev.map(m => {
@@ -529,7 +598,8 @@ export default function App() {
             ...m,
             name: formName,
             dosage: formDosage,
-            time: formTime,
+            time: finalPrimaryTime,
+            times: finalTimes,
             notes: formNotes,
             category: formCategory,
             weeklySchedule: formSchedule,
@@ -546,7 +616,8 @@ export default function App() {
         id: Date.now().toString(),
         name: formName,
         dosage: formDosage,
-        time: formTime,
+        time: finalPrimaryTime,
+        times: finalTimes,
         notes: formNotes,
         category: formCategory,
         weeklySchedule: formSchedule,
@@ -565,6 +636,7 @@ export default function App() {
     setFormName('');
     setFormDosage('');
     setFormTime('08:00');
+    setFormTimes(['08:00']);
     setFormNotes('');
     setFormCategory('pill');
     setFormSchedule([1, 2, 3, 4, 5, 6, 0]);
@@ -577,6 +649,7 @@ export default function App() {
     setFormName(med.name);
     setFormDosage(med.dosage);
     setFormTime(med.time);
+    setFormTimes(med.times && med.times.length > 0 ? med.times : [med.time]);
     setFormNotes(med.notes);
     setFormCategory(med.category);
     setFormSchedule(med.weeklySchedule);
@@ -604,18 +677,29 @@ export default function App() {
     }
   };
 
-  // Toggles the state of taken vs skipped pill for CURRENT calendar date
-  const toggleTakenStatusForToday = (med: Medication) => {
+  // Toggles the state of taken vs skipped pill for CURRENT calendar date and specific time slot
+  const toggleTakenStatusForSlot = (med: Medication, timeSlot?: string | null) => {
     const todayStr = getLocalIsoDate();
-    const isAlreadyTaken = (med.history || {})[todayStr] === true;
+    const actualSlot = timeSlot || med.times?.[0] || med.time;
+    const slotKey = `${todayStr}_${actualSlot}`;
 
     setMedications(prev => prev.map(item => {
       if (item.id === med.id) {
         const updatedHistory = { ...(item.history || {}) };
+        const medTimes = item.times && item.times.length > 0 ? item.times : [item.time];
+        const isSingleSlot = medTimes.length === 1;
+        const isAlreadyTaken = updatedHistory[slotKey] === true || (isSingleSlot && updatedHistory[todayStr] === true);
+
         if (isAlreadyTaken) {
-          delete updatedHistory[todayStr];
+          delete updatedHistory[slotKey];
+          if (isSingleSlot) {
+            delete updatedHistory[todayStr];
+          }
         } else {
-          updatedHistory[todayStr] = true;
+          updatedHistory[slotKey] = true;
+          if (isSingleSlot) {
+            updatedHistory[todayStr] = true;
+          }
           // Play a delightful micro sound confirming action
           playAlarmTone('tranquillo');
           
@@ -631,17 +715,48 @@ export default function App() {
     }));
   };
 
+  const toggleTakenStatusForToday = (med: Medication) => {
+    toggleTakenStatusForSlot(med, null);
+  };
+
   // Launches an active screen notification with continuous alarm play and speech alert
-  const activateVoiceRemindSystem = (med: Medication) => {
+  const triggerDeviceVibration = (patternOrDuration: number | number[], force: boolean = false) => {
+    if (!vibrationEnabled && !force) return;
+    
+    // 1. Try Native Android Bridge first
+    const android = (window as any).Android;
+    if (android && android.vibrate) {
+      try {
+        const duration = Array.isArray(patternOrDuration) 
+          ? patternOrDuration.reduce((acc, curr) => acc + curr, 0)
+          : patternOrDuration;
+        android.vibrate(duration);
+        return;
+      } catch (e) {
+        console.error("Error calling native vibrate", e);
+      }
+    }
+
+    // 2. Fallback to HTML5 Vibration API in standard browsers
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(patternOrDuration);
+      } catch (e) {
+        console.error("Error calling navigator.vibrate", e);
+      }
+    }
+  };
+
+  const activateVoiceRemindSystem = (med: Medication, slotTime?: string | null) => {
     setActiveVoiceReminder(med);
+    const actualSlot = slotTime || med.times?.[0] || med.time;
+    setActiveVoiceReminderSlot(actualSlot);
     
     // Play sound notification loop
     playAlarmTone(med.audioTone);
 
     // Vibrate device if enabled
-    if (vibrationEnabled && 'vibrate' in navigator) {
-      navigator.vibrate([500, 200, 500, 200, 1000]); // generic pulse
-    }
+    triggerDeviceVibration([500, 200, 500, 200, 1000]);
     
     // Speak custom customized script with TTS if enabled
     if (voiceAnnounceEnabled) {
@@ -673,7 +788,7 @@ export default function App() {
 
       if (isPositive && activeVoiceReminder) {
         // Mark as taken
-        toggleTakenStatusForToday(activeVoiceReminder);
+        toggleTakenStatusForSlot(activeVoiceReminder, activeVoiceReminderSlot);
         setActiveVoiceReminder(null);
       } else {
         // Try again speech
@@ -726,13 +841,122 @@ export default function App() {
   };
 
   // Quick helper to determine today's weekday
-  const todayWeekdayVal = new Date().getDay();
+  const todayWeekdayVal = currentTime.getDay();
 
   // Computed values for Daily Summary (Riepilogo Giornaliero)
-  const todayStr = getLocalIsoDate();
+  const todayStr = getLocalIsoDate(currentTime);
   const todayMeds = medications.filter(m => m.isActive && m.weeklySchedule.includes(todayWeekdayVal));
-  const todayTotal = todayMeds.length;
-  const todayTaken = todayMeds.filter(med => (med.history || {})[todayStr] === true).length;
+
+  const todayDoses: { med: Medication; timeSlot: string; isTaken: boolean }[] = [];
+
+  todayMeds.forEach(med => {
+    const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+    medTimes.forEach(timeSlot => {
+      const slotKey = `${todayStr}_${timeSlot}`;
+      const isTaken = (med.history || {})[slotKey] === true || (medTimes.length === 1 && (med.history || {})[todayStr] === true);
+      todayDoses.push({
+        med,
+        timeSlot,
+        isTaken
+      });
+    });
+  });
+
+  // Sort today's doses chronologically by timeSlot
+  todayDoses.sort((a, b) => a.timeSlot.localeCompare(b.timeSlot));
+
+  const todayTotal = todayDoses.length;
+  const todayTaken = todayDoses.filter(d => d.isTaken).length;
+
+  // Filter and split medications for medication management tab
+  const filteredMeds = medications.filter(m => 
+    m.name.toLowerCase().includes(medsSearchQuery.toLowerCase()) ||
+    m.dosage.toLowerCase().includes(medsSearchQuery.toLowerCase()) ||
+    m.notes.toLowerCase().includes(medsSearchQuery.toLowerCase())
+  );
+
+  const activeMedsList = filteredMeds.filter(m => m.isActive);
+  const inactiveMedsList = filteredMeds.filter(m => !m.isActive);
+
+  const renderMedicationRow = (med: Medication) => {
+    const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+    return (
+      <div 
+        key={med.id} 
+        className={`p-4 rounded-3xl border bg-white border-gray-200 shadow-sm text-left flex flex-col gap-3 transition-all ${
+          !med.isActive ? 'opacity-70 bg-slate-50' : ''
+        }`}
+      >
+        <div className="flex justify-between items-start gap-2">
+          {/* Left info */}
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold shrink-0 bg-slate-100`}>
+              {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
+            </div>
+            <div>
+              <h5 className="font-extrabold text-slate-800 leading-tight">{med.name}</h5>
+              <p className="text-3xs text-slate-400 font-extrabold mt-0.5">{med.dosage}</p>
+            </div>
+          </div>
+
+          {/* Right toggle / switch */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              id={`toggle-active-btn-${med.id}`}
+              onClick={() => {
+                setMedications(prev => prev.map(m => m.id === med.id ? { ...m, isActive: !m.isActive } : m));
+              }}
+              className={`w-11 h-6 rounded-full transition-all duration-200 relative flex p-0.5 items-center ${
+                med.isActive ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+            >
+              <div 
+                className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
+                  med.isActive ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Times list badges */}
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{lang === 'it' ? "Orari:" : "Times:"}</span>
+          {medTimes.map((t, tid) => (
+            <span key={tid} className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg border border-slate-200">
+              <Clock className="w-2.5 h-2.5 text-slate-400" />
+              <span>{t}</span>
+            </span>
+          ))}
+        </div>
+
+        {/* Action buttons (Edit/Delete) */}
+        <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
+          <div className="text-[11px] text-slate-400 font-medium">
+            {lang === 'it' ? `Pillole programmate` : `Scheduled pills`}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              id={`edit-med-manage-${med.id}`}
+              onClick={() => startEditMedication(med)}
+              className="py-1.5 px-3 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#1E293B] font-extrabold rounded-xl transition-all flex items-center gap-1"
+            >
+              <span>✏️</span>
+              <span>{lang === 'it' ? "Modifica" : "Edit"}</span>
+            </button>
+            <button
+              id={`delete-med-manage-${med.id}`}
+              onClick={() => deleteMedication(med.id)}
+              className="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold rounded-xl transition-all flex items-center gap-1"
+            >
+              <span>🗑️</span>
+              <span>{lang === 'it' ? "Elimina" : "Delete"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div id="application-container" className={`min-h-screen w-full flex justify-center items-center font-sans p-0 sm:p-4 md:py-8 ${appTheme === 'dark' ? 'bg-slate-900' : appTheme === 'warm' ? 'bg-amber-100' : 'bg-[#F0F4F8]'}`}>
@@ -761,7 +985,7 @@ export default function App() {
                 </span>
                 <span className="text-3xl font-black block tracking-tight truncate px-4">{activeVoiceReminder.name}</span>
                 <span className="text-sm font-semibold bg-amber-900/50 py-1 px-3.5 rounded-full border border-amber-800 text-amber-300 mt-2 inline-block">
-                  {activeVoiceReminder.dosage} &bull; {activeVoiceReminder.time}
+                  {activeVoiceReminder.dosage} &bull; {activeVoiceReminderSlot || activeVoiceReminder.time}
                 
 
                 </span>
@@ -807,7 +1031,7 @@ export default function App() {
                   <button
                     id="manual-confirm-alert"
                     onClick={() => {
-                      toggleTakenStatusForToday(activeVoiceReminder);
+                      toggleTakenStatusForSlot(activeVoiceReminder, activeVoiceReminderSlot);
                       setActiveVoiceReminder(null);
                     }}
                     className="py-4 px-5 rounded-2xl bg-[#D5601B] hover:bg-[#B74C10] text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2"
@@ -908,107 +1132,106 @@ export default function App() {
                    </button>
                  </div>
 
-                {/* Medications listings */}
-                {medications.filter(m => m.isActive && m.weeklySchedule.includes(todayWeekdayVal)).length === 0 ? (
-                  <div className="mb-6 p-8 border-2 border-dashed border-gray-200 text-center space-y-3">
-                    <Pill className="w-10 h-10 text-gray-300 mx-auto" />
-                    <div className="text-gray-500 text-sm font-medium">{t.noMedsToday}</div>
-                  </div>
-                ) : (
-                  <div className="space-y-3.5">
-                    {medications.filter(m => m.isActive && m.weeklySchedule.includes(todayWeekdayVal)).map((med) => {
-                      const todayStr = getLocalIsoDate();
-                      const isTaken = (med.history || {})[todayStr] === true;
-                      return (
-                        <div 
-                          id={`med-row-${med.id}`}
-                          key={med.id}
-                          className={`p-4 rounded-3xl border transition-all space-y-3 relative text-left ${
-                            isTaken 
-                              ? 'bg-emerald-50/45 border-[#A7F3D0] shadow-sm' 
-                              : 'bg-white border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start gap-3">
-                            {/* Medicine icon & title block */}
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 ${
-                                isTaken 
-                                  ? 'bg-emerald-100 text-emerald-800' 
-                                  : `${theme.bgLight} ${theme.text}`
-                              }`}>
-                                {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-extrabold text-base text-[#1E293B] leading-snug tracking-tight break-words">
-                                  {med.name}
-                                </h4>
-                                <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-                                  <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                  <span className={`font-bold ${theme.text}`}>{med.time}</span>
-                                  <span>&bull;</span>
-                                  <span className="font-semibold text-gray-500">{med.dosage}</span>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Options popup edit/del */}
-                            <div className="flex gap-1 shrink-0">
-                              <button
-                                id={`edit-med-btn-${med.id}`}
-                                onClick={() => startEditMedication(med)}
-                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-base"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                id={`delete-med-btn-${med.id}`}
-                                onClick={() => deleteMedication(med.id)}
-                                className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors text-base"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          </div>
+                 {/* Medications listings */}
+                 {todayTotal === 0 ? (
+                   <div className="mb-6 p-8 border-2 border-dashed border-gray-200 text-center space-y-3">
+                     <Pill className="w-10 h-10 text-gray-300 mx-auto" />
+                     <div className="text-gray-500 text-sm font-medium">{t.noMedsToday}</div>
+                   </div>
+                 ) : (
+                   <div className="space-y-3.5">
+                     {todayDoses.map((dose, idx) => {
+                       const { med, timeSlot, isTaken } = dose;
+                       return (
+                         <div 
+                           id={`med-row-${med.id}-${timeSlot}`}
+                           key={`${med.id}-${timeSlot}`}
+                           className={`p-4 rounded-3xl border transition-all space-y-3 relative text-left ${
+                             isTaken 
+                               ? 'bg-emerald-50/45 border-[#A7F3D0] shadow-sm' 
+                               : 'bg-white border-gray-200 hover:border-gray-300'
+                           }`}
+                         >
+                           <div className="flex justify-between items-start gap-3">
+                             {/* Medicine icon & title block */}
+                             <div className="flex items-start gap-3 flex-1 min-w-0">
+                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 ${
+                                 isTaken 
+                                   ? 'bg-emerald-100 text-emerald-800' 
+                                   : `${theme.bgLight} ${theme.text}`
+                               }`}>
+                                 {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
+                               </div>
+                               <div className="min-w-0 flex-1">
+                                 <h4 className="font-extrabold text-base text-[#1E293B] leading-snug tracking-tight break-words">
+                                   {med.name}
+                                 </h4>
+                                 <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                                   <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                   <span className={`font-bold ${theme.text}`}>{timeSlot}</span>
+                                   <span>&bull;</span>
+                                   <span className="font-semibold text-gray-500">{med.dosage}</span>
+                                 </div>
+                               </div>
+                             </div>
+                             {/* Options popup edit/del */}
+                             <div className="flex gap-1 shrink-0">
+                               <button
+                                 id={`edit-med-btn-${med.id}`}
+                                 onClick={() => startEditMedication(med)}
+                                 className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-base"
+                               >
+                                 ✏️
+                               </button>
+                               <button
+                                 id={`delete-med-btn-${med.id}`}
+                                 onClick={() => deleteMedication(med.id)}
+                                 className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors text-base"
+                               >
+                                 🗑️
+                               </button>
+                             </div>
+                           </div>
 
-                          {/* Medicine custom inst */}
-                          {med.notes && (
-                            <div className="text-xs text-gray-500 bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] leading-relaxed font-semibold">
-                              {med.notes}
-                            </div>
-                          )}
+                           {/* Medicine custom inst */}
+                           {med.notes && (
+                             <div className="text-xs text-gray-500 bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] leading-relaxed font-semibold">
+                               {med.notes}
+                             </div>
+                           )}
 
-                          {/* Interactive control buttons */}
-                          <div className="flex items-center gap-2 border-t border-[#E2E8F0] pt-3">
-                            {/* Trigger Voice test / voice dispatch alert */}
-                            <button
-                              id={`say-alert-btn-${med.id}`}
-                              onClick={() => activateVoiceRemindSystem(med)}
-                              className={`py-2.5 px-3.5 rounded-xl ${theme.bgLight} ${theme.bgLightHover} border ${theme.borderLight} ${theme.text} ${theme.textHover} font-bold text-xs flex items-center gap-1.5 transition-all shrink-0`}
-                              title="Avvia avviso vocale"
-                            >
-                              <Volume2 className="w-4 h-4" />
-                              <span>{lang === 'it' ? "Ascolta Voce" : "Speaker"}</span>
-                            </button>
+                           {/* Interactive control buttons */}
+                           <div className="flex items-center gap-2 border-t border-[#E2E8F0] pt-3">
+                             {/* Trigger Voice test / voice dispatch alert */}
+                             <button
+                               id={`say-alert-btn-${med.id}-${timeSlot}`}
+                               onClick={() => activateVoiceRemindSystem(med, timeSlot)}
+                               className={`py-2.5 px-3.5 rounded-xl ${theme.bgLight} ${theme.bgLightHover} border ${theme.borderLight} ${theme.text} ${theme.textHover} font-bold text-xs flex items-center gap-1.5 transition-all shrink-0`}
+                               title="Avvia avviso vocale"
+                             >
+                               <Volume2 className="w-4 h-4" />
+                               <span>{lang === 'it' ? "Ascolta Voce" : "Speaker"}</span>
+                             </button>
 
-                            {/* Big Tick Confirm check */}
-                            <button
-                              id={`confirm-toggle-btn-${med.id}`}
-                              onClick={() => toggleTakenStatusForToday(med)}
-                              className={`py-2 px-3 rounded-xl font-extrabold text-[11px] uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-                                isTaken 
-                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm' 
-                                  : `${theme.primary} ${theme.primaryHover} text-white shadow-sm`
-                              }`}
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              <span>{isTaken ? t.takenBtn : t.pendingBtn}</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                             {/* Big Tick Confirm check */}
+                             <button
+                               id={`confirm-toggle-btn-${med.id}-${timeSlot}`}
+                               onClick={() => toggleTakenStatusForSlot(med, timeSlot)}
+                               className={`py-2 px-3 rounded-xl font-extrabold text-[11px] uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all ${
+                                 isTaken 
+                                   ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm' 
+                                   : `${theme.primary} ${theme.primaryHover} text-white shadow-sm`
+                               }`}
+                             >
+                               <CheckCircle className="w-3.5 h-3.5" />
+                               <span>{isTaken ? t.takenBtn : t.pendingBtn}</span>
+                             </button>
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 )}
 
                 {/* ADVANCED VOICE LISTEN INTEGRATE WIDGET (GEOMETRIC BALANCE) */}
                 <div className={`p-4 rounded-3xl space-y-3.5 text-center mt-6 ${theme.bgLight}/65 border ${theme.borderLight}`}>
@@ -1052,20 +1275,106 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Inline History Adherence and Symptoms Notes inside the Daily Agenda View */}
+                <div className="pt-6 border-t border-slate-200/80 space-y-5">
+                  <div className="text-left pl-1">
+                    <h3 className="text-lg font-extrabold text-[#1E3A8A] tracking-tight">
+                      {lang === 'it' ? "Cronologia & Note" : "Adherence & Notes"}
+                    </h3>
+                    <p className="text-3xs text-[#64748B] font-bold uppercase tracking-wider">
+                      {lang === 'it' ? "Aderenza settimanale e diario sintomi" : "Weekly compliance and symptom journal"}
+                    </p>
+                  </div>
+                  <HistoryAndNotes 
+                    lang={lang} 
+                    medications={medications}
+                    notes={notes}
+                    onAddNote={handleAddDoctorNote}
+                    onDeleteNote={handleDeleteDoctorNote}
+                  />
+                </div>
+
               </div>
             )}
 
-            {/* TAB HISTORY AND MEDICAL SYMPTOMS LOGGER */}
-            
-              {activeTab === 'history' && (
-              <div className="space-y-6 animate-fade-in text-wrap">
-                <HistoryAndNotes 
-                  lang={lang} 
-                  medications={medications}
-                  notes={notes}
-                  onAddNote={handleAddDoctorNote}
-                  onDeleteNote={handleDeleteDoctorNote}
-                />
+            {/* TAB GESTIONE FARMACI (FORMERLY STORICO TAB BUT RENDERED BEAUTIFULLY) */}
+            {activeTab === 'history' && (
+              <div className="space-y-6 animate-fade-in text-wrap pb-12">
+                {/* Gestione Farmaci Header */}
+                <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-[#E2E8F0] shadow-sm">
+                  <div className="text-left">
+                    <h3 className="text-xl font-extrabold text-[#1E3A8A]">
+                      {lang === 'it' ? "Gestione Farmaci" : "Medication Management"}
+                    </h3>
+                    <p className="text-3xs text-[#64748B] font-bold uppercase tracking-wider mt-0.5">
+                      {lang === 'it' ? "Attiva/disattiva e organizza" : "Toggle and organize"}
+                    </p>
+                  </div>
+                  <button
+                    id="med-tab-add-btn"
+                    onClick={() => {
+                      setIsEditingId(null);
+                      setFormName('');
+                      setFormDosage('');
+                      setFormTime('08:00');
+                      setFormTimes(['08:00']);
+                      setFormNotes('');
+                      setFormCategory('pill');
+                      setFormSchedule([1, 2, 3, 4, 5, 6, 0]);
+                      setFormVoicePrompt('');
+                      setFormAudioTone('standard');
+                      setShowAddModal(true);
+                    }}
+                    className={`py-2 px-3.5 rounded-xl ${theme.primary} ${theme.primaryHover} text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-sm`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{lang === 'it' ? "Nuovo" : "Add"}</span>
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={medsSearchQuery}
+                    placeholder={lang === 'it' ? "Cerca farmaco..." : "Search medication..."}
+                    className="w-full bg-white border border-[#E2E8F0] rounded-2xl px-4 py-3 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+                    onChange={(e) => setMedsSearchQuery(e.target.value)}
+                  />
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
+                </div>
+
+                {/* Active Group */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black text-[#1E3A8A] uppercase tracking-widest pl-1 text-left">
+                    {lang === 'it' ? `Attivi (${activeMedsList.length})` : `Active (${activeMedsList.length})`}
+                  </h4>
+                  {activeMedsList.length === 0 ? (
+                    <div className="bg-white/50 border border-dashed border-gray-200 rounded-3xl p-6 text-center text-xs text-gray-400 italic">
+                      {lang === 'it' ? "Nessun farmaco attivo." : "No active medications."}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {activeMedsList.map(med => renderMedicationRow(med))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Inactive Group */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 text-left">
+                    {lang === 'it' ? `Disattivati (${inactiveMedsList.length})` : `Inactive (${inactiveMedsList.length})`}
+                  </h4>
+                  {inactiveMedsList.length === 0 ? (
+                    <div className="bg-white/50 border border-dashed border-gray-200 rounded-3xl p-6 text-center text-xs text-gray-400 italic">
+                      {lang === 'it' ? "Nessun farmaco disattivato." : "No inactive medications."}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {inactiveMedsList.map(med => renderMedicationRow(med))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {/* TAB MAP PIN FINDER */}
@@ -1392,14 +1701,39 @@ export default function App() {
                   </div>
 
                   {/* Vibration Toggle */}
-                  <div className="flex items-center justify-between gap-4 pt-2">
-                    <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.vibrationSetting}</span>
-                    <button 
-                      onClick={() => setVibrationEnabled(!vibrationEnabled)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${vibrationEnabled ? theme.primary : 'bg-[#333]'}`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${vibrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.vibrationSetting}</span>
+                      <div className="flex items-center gap-2.5">
+                        <button 
+                          id="btn-test-vibration"
+                          type="button"
+                          onClick={() => {
+                            // Trigger a test pulse pattern, forcing it to play so they can feel it
+                            triggerDeviceVibration([300, 120, 300], true);
+                          }}
+                          className="px-2.5 py-1 text-3xs font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg transition-all flex items-center gap-1 shrink-0"
+                        >
+                          📳 {lang === 'it' ? "Prova" : "Test"}
+                        </button>
+                        <button 
+                          id="toggle-vibration"
+                          onClick={() => {
+                            const nextState = !vibrationEnabled;
+                            setVibrationEnabled(nextState);
+                            if (nextState) {
+                              // Trigger short tactile feedback when enabled
+                              setTimeout(() => {
+                                triggerDeviceVibration(150, true);
+                              }, 50);
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${vibrationEnabled ? theme.primary : 'bg-[#333]'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${vibrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Always On Display Toggle */}
@@ -1513,8 +1847,8 @@ export default function App() {
               activeTab === 'agenda' ? theme.text : 'text-slate-400 hover:text-[#1E293B]'
             }`}
           >
-            <Pill className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">Farmaci</span>
+            <Calendar className="w-6 h-6" />
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Oggi" : "Today"}</span>
           </button>
 
           <button
@@ -1524,8 +1858,8 @@ export default function App() {
               activeTab === 'history' ? theme.text : 'text-slate-400 hover:text-[#1E293B]'
             }`}
           >
-            <Calendar className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">STORICO</span>
+            <Pill className="w-6 h-6" />
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Farmaci" : "Meds"}</span>
           </button>
 
           <button
@@ -1536,7 +1870,7 @@ export default function App() {
             }`}
           >
             <MapPin className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">Farmacie</span>
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Farmacie" : "Pharmacies"}</span>
           </button>
 
           <button
@@ -1547,7 +1881,7 @@ export default function App() {
             }`}
           >
             <Settings className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">Setup</span>
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Setup" : "Setup"}</span>
           </button>
         </nav>
 
@@ -1586,26 +1920,6 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* BARCODE SMART SEARCH TRIGGER */}
-                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-100 p-4 rounded-2xl flex items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-bold text-teal-950 block">✨ Scrivi con la fotocamera</span>
-                    <span className="text-3xs text-gray-500 block leading-relaxed">
-                      Inquadra il codice a barre della scatola per compilare all'istante!
-                    </span>
-                  </div>
-                  
-                  <button
-                    id="trigger-barcode-cam"
-                    type="button"
-                    onClick={() => setShowScanner(true)}
-                    className="py-2 px-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs inline-flex items-center gap-1.5 shadow-sm transition-all"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Inquadra</span>
-                  </button>
-                </div>
-
                 {/* Main Form Fields */}
                 <form onSubmit={handleSaveMedication} className="space-y-4 text-sm text-left">
                   
@@ -1622,7 +1936,7 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-500 uppercase">{t.dosageLabel.split(' ')[0]}</label>
                       <input
@@ -1637,15 +1951,47 @@ export default function App() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase">{t.timeLabel}</label>
-                      <input
-                        id="form-med-time"
-                        type="time"
-                        required
-                        value={formTime}
-                        onChange={(e) => setFormTime(e.target.value)}
-                        className="w-full p-3 rounded-xl border-2 border-gray-200 bg-[#FCFAF7] focus:outline-none focus:border-[#E58045] text-sm"
-                      />
+                      <label className="text-xs font-bold text-gray-500 uppercase block mb-1">
+                        {lang === 'it' ? "Orari Promemoria" : "Reminder Times"}
+                      </label>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                        {formTimes.map((timeVal, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5">
+                            <input
+                              type="time"
+                              required
+                              value={timeVal}
+                              onChange={(e) => {
+                                const newTimes = [...formTimes];
+                                newTimes[idx] = e.target.value;
+                                setFormTimes(newTimes);
+                              }}
+                              className="flex-1 p-2 rounded-xl border-2 border-gray-200 bg-[#FCFAF7] focus:outline-none focus:border-[#E58045] text-sm"
+                            />
+                            {formTimes.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormTimes(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="text-rose-500 font-extrabold hover:text-rose-700 p-1 text-sm shrink-0"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormTimes(prev => [...prev, '08:00']);
+                        }}
+                        className="mt-1.5 py-1.5 px-3 bg-[#E58045]/10 hover:bg-[#E58045]/20 text-[#E58045] font-extrabold text-xs rounded-lg transition-all flex items-center justify-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{lang === 'it' ? "Aggiungi Orario" : "Add Time Slot"}</span>
+                      </button>
                     </div>
                   </div>
 
@@ -1805,17 +2151,7 @@ export default function App() {
         </AnimatePresence>
 
 
-        {/* ACCESSORY MODAL: BARCODE SCANNER POPUP CARD */}
-        <AnimatePresence>
 
-          {showScanner && (
-            <BarcodeScanner 
-              lang={lang} 
-              onScanSuccess={handleBarcodeDecoded}
-              onClose={() => setShowScanner(false)}
-            />
-          )}
-        </AnimatePresence>
 
 
         {/* ACCESSORY MODAL: CUSTOM DEVICE SOUNDS IMPORT POPUP CARD */}
@@ -1969,6 +2305,94 @@ export default function App() {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Device Notification Sounds Section */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-black text-[#1E293B] uppercase tracking-wide flex justify-between items-center">
+                    <span>{lang === 'it' ? "3. Suoni di Notifica del Dispositivo" : "3. Device Notification Sounds"}</span>
+                    <span className="text-3xs text-emerald-600 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-full">
+                      {(window as any).Android ? (lang === 'it' ? "Nativo" : "Native") : (lang === 'it' ? "Simulato" : "Simulated")}
+                    </span>
+                  </h4>
+                  {deviceRingtones.length === 0 ? (
+                    <div className="text-center py-4 bg-slate-50 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 italic">
+                      {lang === 'it' ? "Nessun suono trovato sul dispositivo." : "No sounds found on the device."}
+                    </div>
+                  ) : (
+                    <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1 border border-[#E2E8F0] rounded-2xl p-2 bg-slate-50/50">
+                      {deviceRingtones.map((ringtone, rIdx) => {
+                        const isAlreadyImported = importedSounds.some(s => s.dataUrl === ringtone.uri);
+                        const isCurrentPlaying = currentlyPlayingUri === ringtone.uri;
+                        return (
+                          <div
+                            key={rIdx}
+                            className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-100 hover:border-[#2563EB]/40 transition-all text-left"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm shrink-0">📱</span>
+                              <span className="text-xs font-bold text-slate-700 truncate">{ringtone.title}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isCurrentPlaying) {
+                                    // Stop
+                                    const android = (window as any).Android;
+                                    if (android && android.stopDeviceSound) {
+                                      android.stopDeviceSound();
+                                    }
+                                    setCurrentlyPlayingUri(null);
+                                  } else {
+                                    // Play
+                                    setCurrentlyPlayingUri(ringtone.uri);
+                                    if (ringtone.uri.startsWith('device_uri_')) {
+                                      // Browser mock trigger
+                                      playAlarmTone('custom_preset_trillo');
+                                    } else {
+                                      const android = (window as any).Android;
+                                      if (android && android.playDeviceSound) {
+                                        android.playDeviceSound(ringtone.uri);
+                                      }
+                                    }
+                                  }
+                                }}
+                                className={`px-2 py-1 rounded-lg text-3xs font-extrabold border transition-colors ${
+                                  isCurrentPlaying
+                                    ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
+                                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                                }`}
+                              >
+                                {isCurrentPlaying ? (lang === 'it' ? "■ Ferma" : "■ Stop") : (lang === 'it' ? "🔊 Ascolta" : "🔊 Listen")}
+                              </button>
+                              
+                              <button
+                                type="button"
+                                disabled={isAlreadyImported}
+                                onClick={() => {
+                                  const newSound = {
+                                    id: 'device_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                                    name: ringtone.title,
+                                    dataUrl: ringtone.uri
+                                  };
+                                  setImportedSounds(prev => [...prev, newSound]);
+                                }}
+                                className={`px-2 py-1 rounded-lg text-3xs font-black text-center transition-all ${
+                                  isAlreadyImported
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                }`}
+                              >
+                                {isAlreadyImported ? (lang === 'it' ? "Importato ✓" : "Imported ✓") : (lang === 'it' ? "Importa" : "Import")}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* List of Custom Imported Sounds */}

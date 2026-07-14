@@ -56,10 +56,17 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
     const diff = (dayVal - currentDay - 7) % 7; // relative index representing nearest past date
     const dateStr = getPastDateString(Math.abs(diff === 0 ? 0 : diff));
 
-    const takenCount = activeMeds.filter(m => (m.history || {})[dateStr] === true).length;
+    let totalSlots = 0;
+    let takenSlots = 0;
+
+    activeMeds.forEach(m => {
+      const medTimes = m.times && m.times.length > 0 ? m.times : [m.time];
+      totalSlots += medTimes.length;
+      takenSlots += medTimes.filter(t => (m.history || {})[`${dateStr}_${t}`] === true || (medTimes.length === 1 && (m.history || {})[dateStr] === true)).length;
+    });
     
-    if (takenCount === activeMeds.length) return 'full';
-    if (takenCount > 0) return 'partial';
+    if (takenSlots === totalSlots) return 'full';
+    if (takenSlots > 0) return 'partial';
     return 'missed';
   };
 
@@ -76,8 +83,11 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
       const dateStr = getLocalIsoDate(targetDate);
 
       const activeMeds = medications.filter(m => m.isActive && m.weeklySchedule.includes(dayVal));
-      totalScheduledCount += activeMeds.length;
-      totalTakenCount += activeMeds.filter(m => (m.history || {})[dateStr] === true).length;
+      activeMeds.forEach(m => {
+        const medTimes = m.times && m.times.length > 0 ? m.times : [m.time];
+        totalScheduledCount += medTimes.length;
+        totalTakenCount += medTimes.filter(t => (m.history || {})[`${dateStr}_${t}`] === true || (medTimes.length === 1 && (m.history || {})[dateStr] === true)).length;
+      });
     }
 
     if (totalScheduledCount === 0) return 100;
@@ -243,12 +253,7 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
                     : status === 'missed' 
                     ? 'bg-red-500 text-white' 
                     : 'bg-gray-200 text-[#475569]'
-                }`}>
-                  {status === 'full' && '✓'}
-                  {status === 'partial' && '⚠'}
-                  {status === 'missed' && '✗'}
-                  {status === 'none' && '-'}
-                </div>
+                }`} />
               </button>
             );
           })}
@@ -266,33 +271,38 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
             </p>
           ) : (
             <div className="space-y-1.5">
-              {medications.filter(m => m.isActive && m.weeklySchedule.includes(weekdays[activeDayIndex].val)).map((med, key) => {
+              {medications.filter(m => m.isActive && m.weeklySchedule.includes(weekdays[activeDayIndex].val)).flatMap((med, medIdx) => {
                 // Determine whether it has a history log check for nearest weekday date
                 const currentDay = new Date().getDay();
                 const diff = (weekdays[activeDayIndex].val - currentDay - 7) % 7;
                 const pastDateStr = getPastDateString(Math.abs(diff === 0 ? 0 : diff));
-                const isTaken = med.history[pastDateStr] === true;
+                const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
 
-                return (
-                  <div key={key} className="flex justify-between items-center py-2 px-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] text-sm">
-                    <div className="flex flex-col">
-                      <span className="font-extrabold text-[#1E293B] leading-tight">{med.name}</span>
-                      <span className="text-xs text-slate-500 font-medium mt-0.5">{med.dosage}</span>
+                return medTimes.map((timeSlot, timeIdx) => {
+                  const slotKey = `${pastDateStr}_${timeSlot}`;
+                  const isTaken = med.history[slotKey] === true || (medTimes.length === 1 && med.history[pastDateStr] === true);
+
+                  return (
+                    <div key={`${medIdx}-${timeIdx}`} className="flex justify-between items-center py-2 px-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] text-sm">
+                      <div className="flex flex-col">
+                        <span className="font-extrabold text-[#1E293B] leading-tight">{med.name}</span>
+                        <span className="text-xs text-slate-500 font-medium mt-0.5">{med.dosage}</span>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                          isTaken 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {isTaken ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                          <span>{isTaken ? (lang === 'it' ? 'Presa' : 'Taken') : (lang === 'it' ? 'Salto' : 'Pending')}</span>
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-medium">({timeSlot})</span>
+                      </div>
                     </div>
-                    
-                    <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        isTaken 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-rose-100 text-rose-800'
-                      }`}>
-                        {isTaken ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                        <span>{isTaken ? (lang === 'it' ? 'Presa' : 'Taken') : (lang === 'it' ? 'Salto' : 'Pending')}</span>
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-medium">({med.time})</span>
-                    </div>
-                  </div>
-                );
+                  );
+                });
               })}
             </div>
           )}

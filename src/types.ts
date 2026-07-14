@@ -12,11 +12,12 @@ export interface Medication {
   name: string;
   dosage: string;
   time: string; // HH:MM
+  times?: string[]; // Multiple daily HH:MM schedules
   notes: string;
   category: MedicationCategory;
   weeklySchedule: number[]; // 0 for Sunday, 1 for Monday, etc.
   isActive: boolean;
-  history: { [dateStr: string]: boolean }; // e.g. "2026-06-10": true (taken)
+  history: { [dateStr: string]: boolean }; // e.g. "2026-06-10": true (taken) or "2026-06-10_08:30": true
   audioTone: string; // 'tranquillo' | 'campana' | 'sirena' | 'standard'
   voicePrompt: string; // custom empathetic speech prompt
   nativeId?: number; // Unique 32-bit integer for Android AlarmManager
@@ -123,8 +124,8 @@ export const TRANSLATIONS: Record<LanguageCode, {
     welcomeDescription: "L'app amica, semplice e vocale progettata per aiutarti (o aiutare i tuoi cari) a ricordarsi di prendere le medicine con serenità e sicurezza.",
     stepVoiceTitle: "Promemoria Empatici",
     stepVoiceDesc: "L'app parla con te di giorno e di notte con una voce calma, lenta e chiara. Puoi confermare l'assunzione dicendo 'Preso' o premendo un grande tasto.",
-    stepScanTitle: "Scannerizza Codici a Barre",
-    stepScanDesc: "Usa la fotocamera del telefono per inquadrare la scatola del farmaco. MediVoce lo riconoscerà e compilerà i dati in automatico.",
+    stepScanTitle: "Suoni del Dispositivo",
+    stepScanDesc: "Personalizza i tuoi allarmi caricando i tuoi file preferiti o importando direttamente le suonerie e i suoni di notifica originali del tuo telefono.",
     stepPharmaTitle: "Farmacie Aperte Vicine",
     stepPharmaDesc: "Se hai bisogno urgente di un farmaco, c'è un tasto rapido che localizza all'istante le farmacie aperte più vicine a te.",
     buttonNext: "Avanti",
@@ -209,8 +210,8 @@ export const TRANSLATIONS: Record<LanguageCode, {
     welcomeDescription: "A friendly, simple, and vocal app designed to help you (or your loved ones) take medications safely, easily, and with peace of mind.",
     stepVoiceTitle: "Empathetic Reminders",
     stepVoiceDesc: "The app talks to you day and night with a calm, slow, and clear voice. You can confirm by saying 'Taken' or touching a giant button.",
-    stepScanTitle: "Scan Medication Barcodes",
-    stepScanDesc: "Point your phone camera to the medication package. MediVoce will automatically recognize it and fill out its details.",
+    stepScanTitle: "Custom Device Sounds",
+    stepScanDesc: "Personalize your alerts by uploading your favorite sounds or directly importing your phone's original ringtones and notification sounds.",
     stepPharmaTitle: "Find Open Pharmacies",
     stepPharmaDesc: "Need a medication urgently? One tap lists all open and nearby pharmacies with easy navigation directions.",
     buttonNext: "Next",
@@ -295,8 +296,8 @@ export const TRANSLATIONS: Record<LanguageCode, {
     welcomeDescription: "La aplicación amigable, sencilla y hablada diseñada para ayudarte a recordar tomar tus medicinas de forma segura y sin estrés.",
     stepVoiceTitle: "Recordatorios Empáticos",
     stepVoiceDesc: "La aplicación le habla de día y de noche con voz pausada y clara. Confirma la dosis diciendo 'Tomada' o pulsando un gran botón.",
-    stepScanTitle: "Escanear Códigos de Barras",
-    stepScanDesc: "Usa la cámara del teléfono para enfocar la caja de medicina. Se detectará y rellenará de forma totalmente automática.",
+    stepScanTitle: "Sonidos del Dispositivo",
+    stepScanDesc: "Personaliza tus alertas subiendo tus archivos favoritos o importando directamente los tonos de llamada y de notificación de tu propio teléfono.",
     stepPharmaTitle: "Farmacias Abiertas Cercanas",
     stepPharmaDesc: "Si tienes una urgencia médica, un botón rápido te dirá las farmacias locales abiertas y de turno más cercanas.",
     buttonNext: "Siguiente",
@@ -381,8 +382,8 @@ export const TRANSLATIONS: Record<LanguageCode, {
     welcomeDescription: "L'application vocale simple et bienveillante conçue pour vous aider (ou vos aînés) à prendre vos traitements médicaux en toute sérénité.",
     stepVoiceTitle: "Rappels Empathiques",
     stepVoiceDesc: "L'application vous parle jour et nuit avec une voix calme, lente et audible. Validez d'un mot en disant 'Pris' ou d'un appui géant.",
-    stepScanTitle: "Scanner les Codes-Barres",
-    stepScanDesc: "Cadrez l'emballage de vos médicaments avec la caméra. MediVoce l'identifiera automatiquement pour pré-remplir la fiche.",
+    stepScanTitle: "Sons de l'Appareil",
+    stepScanDesc: "Personnalisez vos alertes en téléchargeant vos sons favoris ou en important directement les sonneries et notifications d'origine de votre téléphone.",
     stepPharmaTitle: "Pharmacies Ouvertes Proches",
     stepPharmaDesc: "En cas d'urgence, un bouton d'assistance localise instantanément les pharmacies de garde ouvertes autour de vous.",
     buttonNext: "Suivant",

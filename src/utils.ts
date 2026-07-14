@@ -83,6 +83,30 @@ export function playAlarmTone(toneType: string) {
           const parsed = JSON.parse(savedSounds);
           const match = parsed.find((s: any) => s.id === soundId);
           if (match && match.dataUrl) {
+            const android = (window as any).Android;
+            if (android && android.playDeviceSound && (match.dataUrl.startsWith('content://') || match.dataUrl.startsWith('device_uri_'))) {
+              android.playDeviceSound(match.dataUrl);
+              return;
+            }
+
+            if (match.dataUrl.startsWith('device_uri_') || match.dataUrl.startsWith('content://')) {
+              // Web Audio fallback for browser preview of device sounds
+              const frequencies = [600, 800, 1000];
+              frequencies.forEach((freq, idx) => {
+                const osc = audioCtx!.createOscillator();
+                const gain = audioCtx!.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                gain.gain.setValueAtTime(0.4, now + idx * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.25);
+                osc.connect(gain);
+                gain.connect(audioCtx!.destination);
+                osc.start(now + idx * 0.1);
+                osc.stop(now + idx * 0.1 + 0.25);
+              });
+              return;
+            }
+
             const audio = new Audio(match.dataUrl);
             audio.play().catch(e => console.error("Error playing custom loaded sound:", e));
             return;
@@ -146,28 +170,32 @@ export function playAlarmTone(toneType: string) {
     }
 
     if (toneType === 'campana') {
-      // Louder, richer bell sound
-      const osc1 = audioCtx.createOscillator();
-      const osc2 = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      // Louder, richer bell sound, repeated twice for longer duration (~5.5 seconds)
+      for (let i = 0; i < 2; i++) {
+        const strikeTime = now + i * 2.5;
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
-      osc1.type = 'square';
-      osc1.frequency.setValueAtTime(440, now); // Fundamental A4
-      
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(554.37, now); // C#5 (Major Third harmony)
+        osc1.type = 'square';
+        osc1.frequency.setValueAtTime(440, strikeTime); // Fundamental A4
+        
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(554.37, strikeTime); // C#5 (Major Third harmony)
 
-      gain.gain.setValueAtTime(0.8, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 3); // Slow decay
+        gain.gain.setValueAtTime(0.0, strikeTime);
+        gain.gain.linearRampToValueAtTime(0.8, strikeTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, strikeTime + 3); // Slow decay
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(audioCtx.destination);
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
 
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 3);
-      osc2.stop(now + 3);
+        osc1.start(strikeTime);
+        osc2.start(strikeTime);
+        osc1.stop(strikeTime + 3);
+        osc2.stop(strikeTime + 3);
+      }
 
     } else if (toneType === 'sirena') {
       // Louder, more penetrating alarm tone
@@ -193,51 +221,77 @@ export function playAlarmTone(toneType: string) {
       osc.stop(now + 2.5);
 
     } else if (toneType === 'tranquillo') {
-      // Louder but still gentle chime
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      // Louder but still gentle chime, repeated 3 times for longer duration (~6.0 seconds)
+      for (let i = 0; i < 3; i++) {
+        const chimeTime = now + i * 2.0;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(400, now); // Slightly higher than E4
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, chimeTime); // Slightly higher than E4
 
-      gain.gain.setValueAtTime(0.8, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 2.0);
+        gain.gain.setValueAtTime(0.0, chimeTime);
+        gain.gain.linearRampToValueAtTime(0.8, chimeTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, chimeTime + 2.0);
 
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
 
-      osc.start(now);
-      osc.stop(now + 2.0);
+        osc.start(chimeTime);
+        osc.stop(chimeTime + 2.0);
+      }
 
     } else {
-      // Standard telephone alert chime, louder and more annoying
-      const osc1 = audioCtx.createOscillator();
-      const osc2 = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      // Standard telephone alert chime, louder and more annoying, repeated 3 times (~5.4 seconds)
+      for (let i = 0; i < 3; i++) {
+        const ringTime = now + i * 2.2;
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
-      osc1.type = 'square';
-      osc1.frequency.setValueAtTime(700, now);
-      osc2.type = 'square';
-      osc2.frequency.setValueAtTime(700, now + 0.2);
+        osc1.type = 'square';
+        osc1.frequency.setValueAtTime(700, ringTime);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(700, ringTime + 0.2);
 
-      gain.gain.setValueAtTime(0.8, now);
-      gain.gain.setValueAtTime(0.8, now + 0.15);
-      gain.gain.setValueAtTime(0, now + 0.16);
-      gain.gain.setValueAtTime(0.8, now + 0.2);
-      gain.gain.setValueAtTime(0.8, now + 0.35);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+        gain.gain.setValueAtTime(0.0, ringTime);
+        gain.gain.linearRampToValueAtTime(0.8, ringTime + 0.01);
+        gain.gain.setValueAtTime(0.8, ringTime + 0.15);
+        gain.gain.setValueAtTime(0, ringTime + 0.16);
+        gain.gain.setValueAtTime(0.8, ringTime + 0.2);
+        gain.gain.setValueAtTime(0.8, ringTime + 0.35);
+        gain.gain.exponentialRampToValueAtTime(0.01, ringTime + 1.0);
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(audioCtx.destination);
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
 
-      osc1.start(now);
-      osc1.stop(now + 1.0);
-      osc2.start(now + 0.2);
-      osc2.stop(now + 1.0);
+        osc1.start(ringTime);
+        osc1.stop(ringTime + 1.0);
+        osc2.start(ringTime + 0.2);
+        osc2.stop(ringTime + 1.0);
+      }
     }
   } catch (error) {
     console.error('Failed to play custom synthesizer audio tone: ', error);
+  }
+}
+
+/**
+ * Uses Web Speech Synthesis to announce reminders with customization options.
+ * Prioritizes natural, warm, human-like female voices if available on the system.
+ */
+// Cache for voices loaded asynchronously on mobile browsers/webviews
+let cachedVoices: SpeechSynthesisVoice[] = [];
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  try {
+    cachedVoices = window.speechSynthesis.getVoices() || [];
+    window.speechSynthesis.onvoiceschanged = () => {
+      cachedVoices = window.speechSynthesis.getVoices() || [];
+      console.log('[MediVoce] Loaded voices from onvoiceschanged:', cachedVoices.map(v => `${v.name} (${v.lang})`));
+    };
+  } catch (e) {
+    console.error('[MediVoce] Error initializing SpeechSynthesis voices listener:', e);
   }
 }
 
@@ -262,8 +316,10 @@ export function speakAnnouncement(
       window.speechSynthesis.resume();
     }
 
-    // Cancel any currently speaking alerts
-    window.speechSynthesis.cancel();
+    // Cancel any currently speaking alerts only if they are active, to prevent stalling the queue
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
 
     // Set appropriate language locale
     let targetLocale = 'it-IT';
@@ -283,25 +339,35 @@ export function speakAnnouncement(
       langPrefix = 'it';
     }
 
-    // Use a small setTimeout (80ms) before speaking. This is an essential workaround for Chrome on Android 
-    // and mobile webviews where calling cancel() and speak() synchronously in the same frame cancels the new utterance.
+    // Use a longer setTimeout (250ms) before speaking. This is an essential workaround for Chrome on Android 
+    // and mobile webviews where calling cancel() and speak() too quickly cancels the new utterance or locks the TTS queue.
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = targetLocale;
 
       // Customize velocity & vocal resonance
       utterance.rate = speed;
+      utterance.volume = 1.0; // Explicitly ensure maximum volume
       
       if (toneType === 'empathetic') {
-        utterance.pitch = 1.25; // slightly higher, warmer and sweeter, also helps force female pitch on ambiguous voices
+        utterance.pitch = 1.25; // slightly higher, warmer and sweeter
       } else {
-        utterance.pitch = 1.1; // a bit more authoritative but still feminine range
+        utterance.pitch = 1.1; // a bit more authoritative
       }
 
       // Try to find a warm, high-quality human-sounding female voice
-      const allVoices = window.speechSynthesis.getVoices();
+      let allVoices: SpeechSynthesisVoice[] = [];
+      try {
+        allVoices = window.speechSynthesis.getVoices() || [];
+      } catch (e) {
+        console.warn('[MediVoce] Failed to get voices from window.speechSynthesis, using cache:', e);
+      }
+      if (!allVoices || allVoices.length === 0) {
+        allVoices = cachedVoices;
+      }
+
       const langVoices = allVoices.filter(v => {
-        const LowerLang = v.lang.toLowerCase().replace('_', '-');
+        const LowerLang = (v.lang || '').toLowerCase().replace('_', '-');
         return LowerLang.startsWith(langPrefix);
       });
 
@@ -318,14 +384,14 @@ export function speakAnnouncement(
 
         // Priority 1: explicitly Female voices that are LOCAL (extremely reliable offline, won't fail silently)
         let selectedVoice = langVoices.find(v => {
-          const nameLower = v.name.toLowerCase();
+          const nameLower = (v.name || '').toLowerCase();
           return femaleKeywords.some(kw => nameLower.includes(kw)) && v.localService;
         });
 
         // Priority 2: explicitly Female voices (even if network/Google)
         if (!selectedVoice) {
           selectedVoice = langVoices.find(v => {
-            const nameLower = v.name.toLowerCase();
+            const nameLower = (v.name || '').toLowerCase();
             return femaleKeywords.some(kw => nameLower.includes(kw));
           });
         }
@@ -333,7 +399,7 @@ export function speakAnnouncement(
         // Priority 3: Not explicitly male voices, preferring local
         if (!selectedVoice) {
           selectedVoice = langVoices.find(v => {
-            const nameLower = v.name.toLowerCase();
+            const nameLower = (v.name || '').toLowerCase();
             const isNotMale = !maleNames.some(kw => nameLower.includes(kw));
             return isNotMale && v.localService;
           });
@@ -355,23 +421,73 @@ export function speakAnnouncement(
         }
       }
 
+      // To prevent garbage collection of the utterance object on Android/Chrome,
+      // which causes speech to stop mid-sentence or fail silently.
+      if (typeof window !== 'undefined') {
+        const win = window as any;
+        if (!win._activeUtterances) {
+          win._activeUtterances = new Set();
+        }
+        win._activeUtterances.add(utterance);
+      }
+
       // Add Error Handler to fallback to system default voice if selected voice fails (e.g. Google network voices offline)
       utterance.onerror = (err) => {
         console.error('[MediVoce] SpeechSynthesis error:', err.error);
-        if (utterance.voice) {
-          console.warn('[MediVoce] Selected voice failed. Retrying with system default...');
+        if (typeof window !== 'undefined') {
+          const win = window as any;
+          if (win._activeUtterances) {
+            win._activeUtterances.delete(utterance);
+          }
+        }
+
+        // Don't rerun fallback if the error was just "interrupted" or "canceled" via manual stop/cancel
+        if (err.error !== 'interrupted' && err.error !== 'canceled') {
+          console.warn('[MediVoce] SpeechSynthesis failed. Retrying with default device voice engine...');
           const fallbackUtterance = new SpeechSynthesisUtterance(text);
           fallbackUtterance.lang = targetLocale;
           fallbackUtterance.rate = speed;
+          fallbackUtterance.volume = 1.0;
           fallbackUtterance.pitch = toneType === 'empathetic' ? 1.25 : 1.1;
-          fallbackUtterance.onerror = (e) => console.error('[MediVoce] Fallback speech error:', e.error);
-          window.speechSynthesis.speak(fallbackUtterance);
+          
+          if (typeof window !== 'undefined') {
+            const win = window as any;
+            if (win._activeUtterances) {
+              win._activeUtterances.add(fallbackUtterance);
+            }
+            fallbackUtterance.onend = () => {
+              if (win._activeUtterances) win._activeUtterances.delete(fallbackUtterance);
+            };
+            fallbackUtterance.onerror = () => {
+              if (win._activeUtterances) win._activeUtterances.delete(fallbackUtterance);
+            };
+          }
+          
+          try {
+            window.speechSynthesis.speak(fallbackUtterance);
+          } catch (e) {
+            console.error('[MediVoce] Fallback speech trigger failed:', e);
+          }
         }
       };
 
+      utterance.onend = () => {
+        if (typeof window !== 'undefined') {
+          const win = window as any;
+          if (win._activeUtterances) {
+            win._activeUtterances.delete(utterance);
+          }
+        }
+        console.log('[MediVoce] Speech completed successfully.');
+      };
+
       // Speak!
-      window.speechSynthesis.speak(utterance);
-    }, 80);
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.error('[MediVoce] Direct speech trigger failed:', e);
+      }
+    }, 250);
 
   } catch (error) {
     console.error('[MediVoce] Exception during speakAnnouncement:', error);
