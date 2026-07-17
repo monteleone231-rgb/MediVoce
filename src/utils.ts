@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { LanguageCode } from './types';
+import { LanguageCode, Medication } from './types';
 
 // Web Audio API Audio synthesizer to generate alarm tones without external static file requests.
 let audioCtx: AudioContext | null = null;
@@ -118,7 +118,7 @@ export function playAlarmTone(toneType: string) {
     }
 
     // Direct preset check
-    if (toneType === 'preset_arpeggio' || toneType === 'custom_preset_arpeggio') {
+    if (toneType === 'preset_arpeggio' || toneType === 'custom_preset_arpeggio' || toneType === 'standard') {
       const notes = [523.25, 659.25, 783.99, 1046.50];
       notes.forEach((freq, idx) => {
         const osc = audioCtx!.createOscillator();
@@ -135,7 +135,7 @@ export function playAlarmTone(toneType: string) {
       return;
     }
 
-    if (toneType === 'preset_marimba' || toneType === 'custom_preset_marimba') {
+    if (toneType === 'preset_marimba' || toneType === 'custom_preset_marimba' || toneType === 'campana') {
       const notes = [440, 554.37, 659.25, 880];
       notes.forEach((freq, idx) => {
         const osc = audioCtx!.createOscillator();
@@ -152,7 +152,7 @@ export function playAlarmTone(toneType: string) {
       return;
     }
 
-    if (toneType === 'preset_trillo' || toneType === 'custom_preset_trillo') {
+    if (toneType === 'preset_trillo' || toneType === 'custom_preset_trillo' || toneType === 'tranquillo' || toneType === 'sirena') {
       for (let i = 0; i < 4; i++) {
         const osc = audioCtx!.createOscillator();
         const gain = audioCtx!.createGain();
@@ -169,109 +169,20 @@ export function playAlarmTone(toneType: string) {
       return;
     }
 
-    if (toneType === 'campana') {
-      // Louder, richer bell sound, repeated twice for longer duration (~5.5 seconds)
-      for (let i = 0; i < 2; i++) {
-        const strikeTime = now + i * 2.5;
-        const osc1 = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc1.type = 'square';
-        osc1.frequency.setValueAtTime(440, strikeTime); // Fundamental A4
-        
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(554.37, strikeTime); // C#5 (Major Third harmony)
-
-        gain.gain.setValueAtTime(0.0, strikeTime);
-        gain.gain.linearRampToValueAtTime(0.8, strikeTime + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.01, strikeTime + 3); // Slow decay
-
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc1.start(strikeTime);
-        osc2.start(strikeTime);
-        osc1.stop(strikeTime + 3);
-        osc2.stop(strikeTime + 3);
-      }
-
-    } else if (toneType === 'sirena') {
-      // Louder, more penetrating alarm tone
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(500, now);
-      osc.frequency.linearRampToValueAtTime(800, now + 0.4);
-      osc.frequency.linearRampToValueAtTime(500, now + 0.8);
-      osc.frequency.linearRampToValueAtTime(800, now + 1.2);
-      osc.frequency.linearRampToValueAtTime(500, now + 1.6);
-      osc.frequency.linearRampToValueAtTime(800, now + 2.0);
-      osc.frequency.linearRampToValueAtTime(500, now + 2.4);
-
-      gain.gain.setValueAtTime(0.8, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 2.5);
-
+    // Default fallback to preset_arpeggio
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx!.createOscillator();
+      const gain = audioCtx!.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+      gain.gain.setValueAtTime(0.6, now + idx * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.15 + 0.4);
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now);
-      osc.stop(now + 2.5);
-
-    } else if (toneType === 'tranquillo') {
-      // Louder but still gentle chime, repeated 3 times for longer duration (~6.0 seconds)
-      for (let i = 0; i < 3; i++) {
-        const chimeTime = now + i * 2.0;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(400, chimeTime); // Slightly higher than E4
-
-        gain.gain.setValueAtTime(0.0, chimeTime);
-        gain.gain.linearRampToValueAtTime(0.8, chimeTime + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.01, chimeTime + 2.0);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start(chimeTime);
-        osc.stop(chimeTime + 2.0);
-      }
-
-    } else {
-      // Standard telephone alert chime, louder and more annoying, repeated 3 times (~5.4 seconds)
-      for (let i = 0; i < 3; i++) {
-        const ringTime = now + i * 2.2;
-        const osc1 = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc1.type = 'square';
-        osc1.frequency.setValueAtTime(700, ringTime);
-        osc2.type = 'square';
-        osc2.frequency.setValueAtTime(700, ringTime + 0.2);
-
-        gain.gain.setValueAtTime(0.0, ringTime);
-        gain.gain.linearRampToValueAtTime(0.8, ringTime + 0.01);
-        gain.gain.setValueAtTime(0.8, ringTime + 0.15);
-        gain.gain.setValueAtTime(0, ringTime + 0.16);
-        gain.gain.setValueAtTime(0.8, ringTime + 0.2);
-        gain.gain.setValueAtTime(0.8, ringTime + 0.35);
-        gain.gain.exponentialRampToValueAtTime(0.01, ringTime + 1.0);
-
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc1.start(ringTime);
-        osc1.stop(ringTime + 1.0);
-        osc2.start(ringTime + 0.2);
-        osc2.stop(ringTime + 1.0);
-      }
-    }
+      gain.connect(audioCtx!.destination);
+      osc.start(now + idx * 0.15);
+      osc.stop(now + idx * 0.15 + 0.4);
+    });
   } catch (error) {
     console.error('Failed to play custom synthesizer audio tone: ', error);
   }
@@ -295,8 +206,37 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   }
 }
 
+export function stopSpeaking() {
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.nativeSpeechTimeoutId) {
+      clearTimeout(win.nativeSpeechTimeoutId);
+      win.nativeSpeechTimeoutId = null;
+    }
+    win.isSpeakingNatively = false;
+    win.dispatchEvent(new CustomEvent('medivoce-speech', { detail: { speaking: false } }));
+    
+    const android = win.Android;
+    if (android && typeof android.stopSpeaking === 'function') {
+      try {
+        android.stopSpeaking();
+      } catch (e) {
+        console.error('[MediVoce] Failed to call native stopSpeaking', e);
+      }
+    }
+  }
+
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      console.error('[MediVoce] Failed to cancel Web SpeechSynthesis', e);
+    }
+  }
+}
+
 /**
- * Uses Web Speech Synthesis to announce reminders with customization options.
+ * Uses Web Speech Synthesis or native Android TTS to announce reminders with customization options.
  * Prioritizes natural, warm, human-like female voices if available on the system.
  */
 export function speakAnnouncement(
@@ -305,6 +245,41 @@ export function speakAnnouncement(
   speed: number = 0.8, // default slower for seniors
   toneType: 'empathetic' | 'firm' = 'empathetic'
 ) {
+  // Stop any currently active speech (native or web-based)
+  stopSpeaking();
+
+  // Try Native Android TTS Bridge first for 100% offline reliability in WebView
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    const android = win.Android;
+    if (android && typeof android.speak === 'function') {
+      try {
+        win.isSpeakingNatively = true;
+        win.dispatchEvent(new CustomEvent('medivoce-speech', { detail: { speaking: true } }));
+        
+        // Calculate estimated speech duration to animate the visual soundwave accurately
+        const wordsCount = text.split(/\s+/).length;
+        // Average speaking pace adjusted by chosen velocity multiplier
+        const estimatedDurationMs = Math.max(2500, (wordsCount / (1.6 * speed)) * 1000);
+        
+        win.nativeSpeechTimeoutId = setTimeout(() => {
+          win.isSpeakingNatively = false;
+          win.dispatchEvent(new CustomEvent('medivoce-speech', { detail: { speaking: false } }));
+        }, estimatedDurationMs);
+
+        android.speak(text, lang, speed, toneType);
+        return;
+      } catch (e) {
+        console.error('[MediVoce] Native TTS call failed, falling back to Web Speech API:', e);
+        win.isSpeakingNatively = false;
+        if (win.nativeSpeechTimeoutId) {
+          clearTimeout(win.nativeSpeechTimeoutId);
+          win.nativeSpeechTimeoutId = null;
+        }
+      }
+    }
+  }
+
   if (!('speechSynthesis' in window)) {
     console.warn('Speech synthesis not supported in this browser environment.');
     return;
@@ -314,11 +289,6 @@ export function speakAnnouncement(
     // Wake up speech synthesis in case it's in a paused state (very common on mobile)
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
-    }
-
-    // Cancel any currently speaking alerts only if they are active, to prevent stalling the queue
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
     }
 
     // Set appropriate language locale
@@ -354,6 +324,16 @@ export function speakAnnouncement(
       } else {
         utterance.pitch = 1.1; // a bit more authoritative
       }
+
+      const dispatchSpeechEvent = (speaking: boolean) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('medivoce-speech', { detail: { speaking } }));
+        }
+      };
+
+      utterance.onstart = () => {
+        dispatchSpeechEvent(true);
+      };
 
       // Try to find a warm, high-quality human-sounding female voice
       let allVoices: SpeechSynthesisVoice[] = [];
@@ -433,7 +413,12 @@ export function speakAnnouncement(
 
       // Add Error Handler to fallback to system default voice if selected voice fails (e.g. Google network voices offline)
       utterance.onerror = (err) => {
-        console.error('[MediVoce] SpeechSynthesis error:', err.error);
+        dispatchSpeechEvent(false);
+        if (err.error === 'interrupted' || err.error === 'canceled') {
+          console.log('[MediVoce] SpeechSynthesis interrupted or canceled normally:', err.error);
+        } else {
+          console.error('[MediVoce] SpeechSynthesis error:', err.error);
+        }
         if (typeof window !== 'undefined') {
           const win = window as any;
           if (win._activeUtterances) {
@@ -455,10 +440,15 @@ export function speakAnnouncement(
             if (win._activeUtterances) {
               win._activeUtterances.add(fallbackUtterance);
             }
+            fallbackUtterance.onstart = () => {
+              dispatchSpeechEvent(true);
+            };
             fallbackUtterance.onend = () => {
+              dispatchSpeechEvent(false);
               if (win._activeUtterances) win._activeUtterances.delete(fallbackUtterance);
             };
             fallbackUtterance.onerror = () => {
+              dispatchSpeechEvent(false);
               if (win._activeUtterances) win._activeUtterances.delete(fallbackUtterance);
             };
           }
@@ -472,6 +462,7 @@ export function speakAnnouncement(
       };
 
       utterance.onend = () => {
+        dispatchSpeechEvent(false);
         if (typeof window !== 'undefined') {
           const win = window as any;
           if (win._activeUtterances) {
@@ -486,6 +477,7 @@ export function speakAnnouncement(
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         console.error('[MediVoce] Direct speech trigger failed:', e);
+        dispatchSpeechEvent(false);
       }
     }, 250);
 
@@ -617,4 +609,11 @@ export function getRandomBarcode(lang: string = 'it'): BarcodeResult {
     instructions: raw.instructions[lang] || raw.instructions['en'] || raw.instructions['it'] || '',
     category: raw.category
   };
+}
+
+export function isScheduledOnDate(med: Medication, date: Date): boolean {
+  if (med.frequencyType === 'monthly') {
+    return med.monthlyDay !== undefined && date.getDate() === med.monthlyDay;
+  }
+  return med.weeklySchedule.includes(date.getDay());
 }

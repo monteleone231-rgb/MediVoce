@@ -50,8 +50,12 @@ android {
 }
 
 dependencies {
+    // Capacitor core
+    implementation(project(":capacitor-android"))
+
     // AndroidX & UI
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
     implementation("androidx.activity:activity-compose:1.9.0")
     
@@ -63,9 +67,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     
-    // AI SDK (Google GenAI)
-    implementation("com.google.genai:google-genai:0.2.2")
-
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

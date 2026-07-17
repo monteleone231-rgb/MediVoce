@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Calendar, FileText, Check, AlertCircle, Mic, MicOff, Star, Trash2 } from 'lucide-react';
+import { Calendar, FileText, Check, AlertCircle, Mic, MicOff, Star, Trash2, Heart, Share2, Smile, Copy } from 'lucide-react';
 import { LanguageCode, TRANSLATIONS, Medication, DoctorNote } from '../types';
-import { getLocalIsoDate } from '../utils';
+import { getLocalIsoDate, isScheduledOnDate } from '../utils';
 
 interface HistoryAndNotesProps {
   lang: LanguageCode;
@@ -25,6 +25,78 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
   const [isSymptom, setIsSymptom] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingError, setRecordingError] = useState<string>('');
+
+  // Wellbeing and Share State
+  const [wellBeingLogs, setWellBeingLogs] = useState<{[key: string]: number}>(() => {
+    try {
+      const stored = localStorage.getItem('medivoce_wellbeing_logs');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [showShareToast, setShowShareToast] = useState<boolean>(false);
+
+  const todayStr = getLocalIsoDate();
+  const todayWellBeingScore = wellBeingLogs[todayStr] || 0;
+
+  const handleSetWellBeing = (score: number) => {
+    const updated = { ...wellBeingLogs, [todayStr]: score };
+    setWellBeingLogs(updated);
+    localStorage.setItem('medivoce_wellbeing_logs', JSON.stringify(updated));
+  };
+
+  const handleCopyReport = () => {
+    const activeMedsToday = medications.filter(m => m.isActive && isScheduledOnDate(m, new Date()));
+    let totalScheduledToday = 0;
+    let takenToday = 0;
+    activeMedsToday.forEach(m => {
+      const medTimes = m.times && m.times.length > 0 ? m.times : [m.time];
+      totalScheduledToday += medTimes.length;
+      takenToday += medTimes.filter(t => (m.history || {})[`${todayStr}_${t}`] === true || (medTimes.length === 1 && (m.history || {})[todayStr] === true)).length;
+    });
+
+    const complianceText = totalScheduledToday === 0 
+      ? (lang === 'it' ? 'Nessun farmaco programmato per oggi.' : 'No medications scheduled for today.')
+      : (lang === 'it' 
+          ? `Presi ${takenToday} di ${totalScheduledToday} farmaci (${Math.round((takenToday/totalScheduledToday)*100)}%)` 
+          : `Took ${takenToday} of ${totalScheduledToday} meds (${Math.round((takenToday/totalScheduledToday)*100)}%)`);
+
+    const wellbeingEmoji = todayWellBeingScore === 5 ? '😊' : todayWellBeingScore === 4 ? '🙂' : todayWellBeingScore === 3 ? '😐' : todayWellBeingScore === 2 ? '🙁' : todayWellBeingScore === 1 ? '😔' : 'Non registrato / Not logged';
+
+    // Get today's notes
+    const todayNotes = notes.filter(n => n.date === todayStr);
+    const notesText = todayNotes.length === 0 
+      ? (lang === 'it' ? 'Nessun sintomo o nota inserita.' : 'No notes or symptoms reported.')
+      : todayNotes.map(n => `- [${n.hasSymptom ? 'Sintomo' : 'Nota'}]: ${n.text}`).join('\n');
+
+    const report = lang === 'it' ? `📋 **REPORT SALUTE MEDIVOCE** (${todayStr})
+--------------------------------------
+👤 Paziente: Assistito MediVoce
+📈 Aderenza Farmaci Oggi: ${complianceText}
+🌸 Stato di Benessere: ${wellbeingEmoji} ${todayWellBeingScore ? `(${todayWellBeingScore}/5)` : ''}
+
+📝 Note e Sintomi registrati oggi:
+${notesText}
+
+---
+Inviato tramite l'app MediVoce.` 
+: `📋 **MEDIVOCE HEALTH REPORT** (${todayStr})
+--------------------------------------
+👤 Patient: MediVoce User
+📈 Medication Adherence Today: ${complianceText}
+🌸 Well-Being Status: ${wellbeingEmoji} ${todayWellBeingScore ? `(${todayWellBeingScore}/5)` : ''}
+
+📝 Notes & Symptoms logged today:
+${notesText}
+
+---
+Sent via MediVoce app.`;
+
+    navigator.clipboard.writeText(report);
+    setShowShareToast(true);
+    setTimeout(() => setShowShareToast(false), 3000);
+  };
 
   // Days of the week mapping
   const weekdays = [
@@ -46,15 +118,17 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
 
   // Compute daily status for a given weekday value
   const getDayComplianceStatus = (dayVal: number) => {
-    // filter medications active on this weekday
-    const activeMeds = medications.filter(m => m.isActive && m.weeklySchedule.includes(dayVal));
-    if (activeMeds.length === 0) return 'none'; // nothing scheduled
-
     // Check if taken in history
     // For simplicity, we check history for the nearest calendar date of that weekday
     const currentDay = new Date().getDay();
     const diff = (dayVal - currentDay - 7) % 7; // relative index representing nearest past date
-    const dateStr = getPastDateString(Math.abs(diff === 0 ? 0 : diff));
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - Math.abs(diff === 0 ? 0 : diff));
+    const dateStr = getLocalIsoDate(targetDate);
+
+    // filter medications active on this target date
+    const activeMeds = medications.filter(m => m.isActive && isScheduledOnDate(m, targetDate));
+    if (activeMeds.length === 0) return 'none'; // nothing scheduled
 
     let totalSlots = 0;
     let takenSlots = 0;
@@ -82,7 +156,7 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
       const dayVal = targetDate.getDay();
       const dateStr = getLocalIsoDate(targetDate);
 
-      const activeMeds = medications.filter(m => m.isActive && m.weeklySchedule.includes(dayVal));
+      const activeMeds = medications.filter(m => m.isActive && isScheduledOnDate(m, targetDate));
       activeMeds.forEach(m => {
         const medTimes = m.times && m.times.length > 0 ? m.times : [m.time];
         totalScheduledCount += medTimes.length;
@@ -237,23 +311,21 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
                 id={`weekday-indicator-${idx}`}
                 key={idx}
                 onClick={() => setActiveDayIndex(idx)}
-                className={`flex flex-col items-center p-1.5 rounded-xl transition-all border ${
+                className={`flex items-center justify-center aspect-square rounded-full transition-all border-4 text-base font-black uppercase shadow-sm cursor-pointer ${
                   isActive 
-                    ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-sm transform scale-102 font-bold' 
-                    : 'bg-[#F8FAFC] border-[#E2E8F0] hover:bg-slate-100 text-gray-700 font-medium'
-                }`}
-              >
-                <span className="text-3xs font-extrabold uppercase mb-1">{day.label.charAt(0)}</span>
-                
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-3xs font-black ${
+                    ? 'border-[#2563EB] scale-105 shadow-md' 
+                    : 'border-transparent'
+                } ${
                   status === 'full' 
                     ? 'bg-emerald-500 text-white' 
                     : status === 'partial' 
                     ? 'bg-amber-400 text-gray-900' 
                     : status === 'missed' 
-                    ? 'bg-red-500 text-white' 
-                    : 'bg-gray-200 text-[#475569]'
-                }`} />
+                    ? 'bg-rose-500 text-white' 
+                    : 'bg-slate-100 text-[#475569]'
+                }`}
+              >
+                {day.label.charAt(0)}
               </button>
             );
           })}
@@ -265,52 +337,149 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
             {lang === 'it' ? "Dettaglio di " : "Details for "} {weekdays[activeDayIndex].label}
           </h4>
 
-          {medications.filter(m => m.isActive && m.weeklySchedule.includes(weekdays[activeDayIndex].val)).length === 0 ? (
-            <p className="text-sm italic text-gray-400 py-2">
-              {lang === 'it' ? "Nessuna medicina programmata per oggi." : "No medications scheduled for this day."}
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {medications.filter(m => m.isActive && m.weeklySchedule.includes(weekdays[activeDayIndex].val)).flatMap((med, medIdx) => {
-                // Determine whether it has a history log check for nearest weekday date
-                const currentDay = new Date().getDay();
-                const diff = (weekdays[activeDayIndex].val - currentDay - 7) % 7;
-                const pastDateStr = getPastDateString(Math.abs(diff === 0 ? 0 : diff));
-                const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+          {(() => {
+            const currentDay = new Date().getDay();
+            const diff = (weekdays[activeDayIndex].val - currentDay - 7) % 7;
+            const pastDate = new Date();
+            pastDate.setDate(pastDate.getDate() - Math.abs(diff === 0 ? 0 : diff));
+            const activeMeds = medications.filter(m => m.isActive && isScheduledOnDate(m, pastDate));
+            if (activeMeds.length === 0) {
+              return (
+                <p className="text-sm italic text-gray-400 py-2">
+                  {lang === 'it' ? "Nessuna medicina programmata per oggi." : "No medications scheduled for this day."}
+                </p>
+              );
+            }
+            return (
+              <div className="space-y-1.5">
+                {activeMeds.flatMap((med, medIdx) => {
+                  const pastDateStr = getLocalIsoDate(pastDate);
+                  const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
 
-                return medTimes.map((timeSlot, timeIdx) => {
-                  const slotKey = `${pastDateStr}_${timeSlot}`;
-                  const isTaken = med.history[slotKey] === true || (medTimes.length === 1 && med.history[pastDateStr] === true);
+                  return medTimes.map((timeSlot, timeIdx) => {
+                    const slotKey = `${pastDateStr}_${timeSlot}`;
+                    const isTaken = med.history[slotKey] === true || (medTimes.length === 1 && med.history[pastDateStr] === true);
 
-                  return (
-                    <div key={`${medIdx}-${timeIdx}`} className="flex justify-between items-center py-2 px-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] text-sm">
-                      <div className="flex flex-col">
-                        <span className="font-extrabold text-[#1E293B] leading-tight">{med.name}</span>
-                        <span className="text-xs text-slate-500 font-medium mt-0.5">{med.dosage}</span>
+                    return (
+                      <div key={`${medIdx}-${timeIdx}`} className="flex justify-between items-center py-2 px-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] text-sm">
+                        <div className="flex flex-col">
+                          <span className="font-extrabold text-[#1E293B] leading-tight">{med.name}</span>
+                          <span className="text-xs text-slate-500 font-medium mt-0.5">{med.dosage}</span>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            isTaken 
+                              ? 'bg-emerald-100 text-emerald-800' 
+                              : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {isTaken ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                            <span>{isTaken ? (lang === 'it' ? 'Presa' : 'Taken') : (lang === 'it' ? 'Salto' : 'Pending')}</span>
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-medium">({timeSlot})</span>
+                        </div>
                       </div>
-                      
-                      <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                          isTaken 
-                            ? 'bg-emerald-100 text-emerald-800' 
-                            : 'bg-rose-100 text-rose-800'
-                        }`}>
-                          {isTaken ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                          <span>{isTaken ? (lang === 'it' ? 'Presa' : 'Taken') : (lang === 'it' ? 'Salto' : 'Pending')}</span>
-                        </span>
-                        <span className="text-[10px] text-gray-400 font-medium">({timeSlot})</span>
-                      </div>
-                    </div>
-                  );
-                });
-              })}
-            </div>
-          )}
+                    );
+                  });
+                })}
+              </div>
+            );
+          })()}
         </div>
 
       </section>
 
-      {/* 2. REGISTRO DELLE NOTE SUI FARMACI SECTION */}
+      {/* 2. STATO DI BENESSERE & REPORT ASSISTENTE SECTION */}
+      <section id="wellbeing-share-card" className="bg-white px-4 py-5 rounded-3xl border border-[#E2E8F0] shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100">
+              <Smile className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-lg font-extrabold text-[#1E3A8A] tracking-tight">
+                {lang === 'it' ? "Come ti senti oggi?" : "How do you feel today?"}
+              </h3>
+              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider text-left">
+                {lang === 'it' ? "Stato di salute e condivisione" : "Well-being & caregiver report"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Clickable Emoji ratings */}
+        <div className="grid grid-cols-5 gap-2 pt-1">
+          {([
+            { score: 1, emoji: '😔', label: { it: 'Triste', en: 'Sad' } },
+            { score: 2, emoji: '🙁', label: { it: 'Giù', en: 'Unwell' } },
+            { score: 3, emoji: '😐', label: { it: 'Così così', en: 'Okay' } },
+            { score: 4, emoji: '🙂', label: { it: 'Bene', en: 'Good' } },
+            { score: 5, emoji: '😊', label: { it: 'Ottimo', en: 'Great' } }
+          ]).map((item) => {
+            const isSelected = todayWellBeingScore === item.score;
+            return (
+              <button
+                key={item.score}
+                type="button"
+                onClick={() => handleSetWellBeing(item.score)}
+                className={`flex flex-col items-center p-2 rounded-2xl border transition-all ${
+                  isSelected 
+                    ? 'bg-amber-50 border-amber-300 scale-105 shadow-xs font-bold' 
+                    : 'bg-slate-50/50 border-gray-150 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-2xl mb-1 filter drop-shadow-xs transition-transform active:scale-125">{item.emoji}</span>
+                <span className={`text-[9px] tracking-tight ${isSelected ? 'text-amber-800 font-extrabold' : 'text-gray-400 font-medium'}`}>
+                  {item.label[lang] || item.label.en}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Caregiver Report Button card */}
+        <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-[#E2E8F0] space-y-2.5 text-left relative overflow-hidden">
+          <div className="flex items-start gap-2.5">
+            <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+              <Share2 className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-bold text-[#1E3A8A]">
+                {lang === 'it' ? "Invia Report al Caregiver" : "Share Report with Caregiver"}
+              </h4>
+              <p className="text-[11px] text-gray-500 font-medium leading-normal mt-0.5">
+                {lang === 'it' 
+                  ? "Crea un report di oggi con medicinali presi, sintomi e livello di benessere pronto da inviare su WhatsApp o SMS." 
+                  : "Copies a formatted summary of today's compliance, wellness score, and notes to share."}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCopyReport}
+            className={`w-full py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs ${
+              showShareToast 
+                ? 'bg-emerald-500 text-white shadow-emerald-100' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+          >
+            {showShareToast ? (
+              <>
+                <Check className="w-4 h-4 animate-bounce" />
+                <span>{lang === 'it' ? "Report Copiato!" : "Report Copied!"}</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5" />
+                <span>{lang === 'it' ? "Copia Report Giornaliero" : "Copy Today's Report"}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </section>
+
+      {/* 3. REGISTRO DELLE NOTE SUI FARMACI SECTION */}
       <section id="doctor-notes-card" className="bg-white px-4 py-5 rounded-3xl border border-[#E2E8F0] shadow-sm space-y-4">
         
         <div className="flex items-center gap-2.5">

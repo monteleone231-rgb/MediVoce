@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Heart, Plus, Pill, Award, Globe, MapPin, 
@@ -14,7 +14,7 @@ import {
 import { IT, US, ES, FR } from 'country-flag-icons/react/3x2';
 
 import { LanguageCode, Medication, MedicationCategory, DoctorNote, TRANSLATIONS } from './types';
-import { playAlarmTone, speakAnnouncement, BARCODE_MOCK_DATABASE, getLocalIsoDate } from './utils';
+import { playAlarmTone, speakAnnouncement, stopSpeaking, BARCODE_MOCK_DATABASE, getLocalIsoDate, isScheduledOnDate } from './utils';
 import Onboarding from './components/Onboarding';
 import PharmacyLocator from './components/PharmacyLocator';
 import HistoryAndNotes from './components/HistoryAndNotes';
@@ -178,7 +178,7 @@ export default function App() {
         weeklySchedule: [1, 2, 3, 4, 5, 6, 0], // Every day
         isActive: true,
         history: {},
-        audioTone: 'standard',
+        audioTone: 'preset_arpeggio',
         voicePrompt: lang === 'it' 
           ? "Cara Maria, ricordati di assumere la Cardioaspirina con un sorso d'acqua per proteggere il tuo cuore." 
           : lang === 'es'
@@ -197,7 +197,7 @@ export default function App() {
         weeklySchedule: [1, 3, 5], // Mon, Wed, Fri
         isActive: true,
         history: {},
-        audioTone: 'campana',
+        audioTone: 'preset_marimba',
         voicePrompt: lang === 'it' 
           ? "È ora del tuo sciroppo emolliente. Ricordati di usare il cucchiaino dosatore." 
           : lang === 'es'
@@ -216,7 +216,7 @@ export default function App() {
         weeklySchedule: [1, 2, 3, 4, 5, 6, 0],
         isActive: true,
         history: {},
-        audioTone: 'sirena',
+        audioTone: 'preset_trillo',
         voicePrompt: lang === 'it' 
           ? "Attenzione, è il momento dell'insulina serale prima di cena. Controlla il misuratore." 
           : lang === 'es'
@@ -274,6 +274,7 @@ export default function App() {
   // Form State for Adding/Editing
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
+  const [medToDeleteId, setMedToDeleteId] = useState<string | null>(null);
   const [formName, setFormName] = useState<string>('');
   const [formDosage, setFormDosage] = useState<string>('');
   const [formTime, setFormTime] = useState<string>('08:00');
@@ -282,7 +283,13 @@ export default function App() {
   const [formCategory, setFormCategory] = useState<MedicationCategory>('pill');
   const [formSchedule, setFormSchedule] = useState<number[]>([1, 2, 3, 4, 5, 6, 0]); // Default daily
   const [formVoicePrompt, setFormVoicePrompt] = useState<string>('');
-  const [formAudioTone, setFormAudioTone] = useState<string>('standard');
+  const [formAudioTone, setFormAudioTone] = useState<string>('preset_arpeggio');
+  const [formStockEnabled, setFormStockEnabled] = useState<boolean>(false);
+  const [formStockCurrent, setFormStockCurrent] = useState<number>(30);
+  const [formStockMin, setFormStockMin] = useState<number>(5);
+  const [formPillColor, setFormPillColor] = useState<string>('blue');
+  const [formFrequencyType, setFormFrequencyType] = useState<'weekly' | 'monthly'>('weekly');
+  const [formMonthlyDay, setFormMonthlyDay] = useState<number>(1);
   const [activeVoiceReminderSlot, setActiveVoiceReminderSlot] = useState<string | null>(null);
   const [medsSearchQuery, setMedsSearchQuery] = useState<string>('');
 
@@ -290,13 +297,32 @@ export default function App() {
   const [showScanner, setShowScanner] = useState<boolean>(false);
 
   // Settings State variables
-  const [speechSpeed, setSpeechSpeed] = useState<number>(0.75); // Slower default for senior readability
-  const [speechTone, setSpeechTone] = useState<'empathetic' | 'firm'>('empathetic');
+  const [speechSpeed, setSpeechSpeed] = useState<number>(() => {
+    const saved = localStorage.getItem('medivoce_speech_speed');
+    return saved ? parseFloat(saved) : 0.75;
+  });
+  const [speechTone, setSpeechTone] = useState<'empathetic' | 'firm'>(() => {
+    return (localStorage.getItem('medivoce_speech_tone') as 'empathetic' | 'firm') || 'empathetic';
+  });
   const [mobileSoundLevel, setMobileSoundLevel] = useState<'none' | 'beep' | 'continuous'>('continuous');
 
   const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
     return localStorage.getItem('medivoce_vibration') !== 'false'; // true by default
   });
+
+  const lastCheckedMinuteRef = useRef<string>('');
+  const dismissedAutoTriggersRef = useRef<{[key: string]: { dismissedAt: number, type: 'snooze' | 'dismiss' }}>({});
+
+  const getMinutesSinceMidnight = (timeStr: string): number => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const get24HourTimeString = (date: Date): string => {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
 
   const [voiceAnnounceEnabled, setVoiceAnnounceEnabled] = useState<boolean>(() => {
     return localStorage.getItem('medivoce_voice_announce') !== 'false'; // true by default
@@ -368,7 +394,44 @@ export default function App() {
   // Interactive speaking notification modal
   const [activeVoiceReminder, setActiveVoiceReminder] = useState<Medication | null>(null);
   const [isListeningForConfirm, setIsListeningForConfirm] = useState<boolean>(false);
+  const [speechConfirmError, setSpeechConfirmError] = useState<string>('');
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [showDevDocs, setShowDevDocs] = useState<boolean>(false);
+
+  // Monitor speaking events and state
+  useEffect(() => {
+    const handleSpeechEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && typeof customEvent.detail.speaking === 'boolean') {
+        setIsSpeaking(customEvent.detail.speaking);
+      }
+    };
+
+    window.addEventListener('medivoce-speech', handleSpeechEvent as any);
+
+    const timer = setInterval(() => {
+      const isNativeSpeaking = (window as any).isSpeakingNatively === true;
+      if (isNativeSpeaking) {
+        setIsSpeaking(true);
+        return;
+      }
+
+      if ('speechSynthesis' in window) {
+        const isCurrentlySpeaking = window.speechSynthesis.speaking;
+        setIsSpeaking(prev => {
+          if (prev !== isCurrentlySpeaking) {
+            return isCurrentlySpeaking;
+          }
+          return prev;
+        });
+      }
+    }, 200);
+
+    return () => {
+      window.removeEventListener('medivoce-speech', handleSpeechEvent as any);
+      clearInterval(timer);
+    };
+  }, []);
 
   // Warm up Web Speech synthesis voices on mount to ensure voices are preloaded on mobile devices
   useEffect(() => {
@@ -383,6 +446,11 @@ export default function App() {
       };
     }
   }, []);
+
+  // Reset speech confirmation error whenever a new reminder is activated or dismissed
+  useEffect(() => {
+    setSpeechConfirmError('');
+  }, [activeVoiceReminder]);
 
   // Persistence hooks
   useEffect(() => {
@@ -417,6 +485,32 @@ export default function App() {
     localStorage.setItem('medivoce_alwayson', alwaysOnDisplay.toString());
   }, [alwaysOnDisplay]);
 
+  useEffect(() => {
+    localStorage.setItem('medivoce_speech_speed', speechSpeed.toString());
+  }, [speechSpeed]);
+
+  useEffect(() => {
+    localStorage.setItem('medivoce_speech_tone', speechTone);
+  }, [speechTone]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const android = (window as any).Android;
+      if (android && typeof android.savePreferencesToNative === 'function') {
+        try {
+          android.savePreferencesToNative(
+            lang,
+            voiceAnnounceEnabled,
+            speechSpeed,
+            speechTone
+          );
+        } catch (e) {
+          console.error("[MediVoce] Failed to save preferences to native:", e);
+        }
+      }
+    }
+  }, [lang, voiceAnnounceEnabled, speechSpeed, speechTone]);
+
   const theme = THEME_MAP[colorTheme];
 
   // Handle Wakelock for Always On Display during notification
@@ -445,33 +539,85 @@ export default function App() {
     };
   }, [activeVoiceReminder, alwaysOnDisplay]);
 
-  // Handle live clock tick and scheduled standby alarm checks
+  // Handle continuous periodic vibration while an active voice reminder notification is playing
+  useEffect(() => {
+    let intervalId: any = null;
+    
+    if (activeVoiceReminder && vibrationEnabled) {
+      // Vibrate immediately using a highly visible pulsating pattern
+      triggerDeviceVibration([800, 500, 800, 500]);
+      
+      // Repeat the vibration sequence every 3 seconds to keep capturing attention until dismissed
+      intervalId = setInterval(() => {
+        triggerDeviceVibration([800, 500, 800, 500]);
+      }, 3000);
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      // Cancel any current vibration when the alert is dismissed or completed
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(0);
+        } catch (e) {}
+      }
+    };
+  }, [activeVoiceReminder, vibrationEnabled]);
+
+  // Handle live clock tick and scheduled standby alarm checks with high-precision 24-hour minute tracking and 15-minute grace period
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
       setCurrentTime(now);
 
-      // System-wide standby checker: triggers if the time exactly matches the scheduled medication
-      if (now.getSeconds() === 0) {
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const todayWeekdayVal = now.getDay();
-        
-        medications.forEach(med => {
-          if (med.isActive && med.weeklySchedule.includes(todayWeekdayVal)) {
-             const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
-             if (medTimes.includes(timeString)) {
-               const dateStr = getLocalIsoDate(now);
-               const slotKey = `${dateStr}_${timeString}`;
-               const isTaken = (med.history || {})[slotKey] === true || (medTimes.length === 1 && (med.history || {})[dateStr] === true);
-               
-               if (!isTaken && activeVoiceReminder?.id !== med.id) {
-                 console.log("[MediVoce] Auto-triggering scheduled dose:", med.name, "at", timeString);
-                 activateVoiceRemindSystem(med, timeString);
-               }
-             }
-          }
-        });
-      }
+      const timeString = get24HourTimeString(now);
+      const todayWeekdayVal = now.getDay();
+      const dateStr = getLocalIsoDate(now);
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      // Check for any medication that is due today, has not been taken,
+      // and is within the 15-minute grace period (robust against background/standby suspension).
+      medications.forEach(med => {
+        if (med.isActive && isScheduledOnDate(med, now)) {
+           const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+           
+           medTimes.forEach(timeSlot => {
+              const slotKey = `${dateStr}_${timeSlot}`;
+              const isTaken = (med.history || {})[slotKey] === true || (medTimes.length === 1 && (med.history || {})[dateStr] === true);
+              
+              if (!isTaken) {
+                const slotMinutes = getMinutesSinceMidnight(timeSlot);
+                const diff = currentMinutes - slotMinutes;
+                
+                // Trigger if we are within the 15-minute grace period of the scheduled time
+                if (diff >= 0 && diff <= 15) {
+                  const dismissedKey = `${med.id}_${slotKey}`;
+                  const dismissedInfo = dismissedAutoTriggersRef.current[dismissedKey];
+                  
+                  let isSnoozedOrDismissed = false;
+                  if (dismissedInfo) {
+                    if (dismissedInfo.type === 'dismiss') {
+                      isSnoozedOrDismissed = true;
+                    } else if (dismissedInfo.type === 'snooze') {
+                      // Allow refiring after 5 minutes (300,000 ms) of snooze
+                      const nowMs = Date.now();
+                      if (nowMs - dismissedInfo.dismissedAt < 5 * 60 * 1000) {
+                        isSnoozedOrDismissed = true;
+                      }
+                    }
+                  }
+                  
+                  if (!isSnoozedOrDismissed && activeVoiceReminder?.id !== med.id) {
+                    console.log("[MediVoce] Auto-triggering scheduled dose (grace period):", med.name, "at", timeSlot);
+                    activateVoiceRemindSystem(med, timeSlot);
+                  }
+                }
+              }
+           });
+        }
+      });
     }, 1000);
     return () => clearInterval(timer);
   }, [medications, activeVoiceReminder]);
@@ -603,9 +749,14 @@ export default function App() {
             notes: formNotes,
             category: formCategory,
             weeklySchedule: formSchedule,
+            frequencyType: formFrequencyType,
+            monthlyDay: formFrequencyType === 'monthly' ? formMonthlyDay : undefined,
             audioTone: formAudioTone,
             voicePrompt: formVoicePrompt || `${t.speakAlert}: ${formName}. ${formDosage}. ${formNotes}`,
-            nativeId: m.nativeId || Math.floor(Math.random() * 10000000)
+            nativeId: m.nativeId || Math.floor(Math.random() * 10000000),
+            stockCurrent: formStockEnabled ? formStockCurrent : undefined,
+            stockMin: formStockEnabled ? formStockMin : undefined,
+            pillColor: formPillColor
           };
         }
         return m;
@@ -621,11 +772,16 @@ export default function App() {
         notes: formNotes,
         category: formCategory,
         weeklySchedule: formSchedule,
+        frequencyType: formFrequencyType,
+        monthlyDay: formFrequencyType === 'monthly' ? formMonthlyDay : undefined,
         isActive: true,
         history: {},
         audioTone: formAudioTone,
         voicePrompt: formVoicePrompt || `${t.speakAlert}: ${formName}. ${formDosage}. ${formNotes}`,
-        nativeId: Math.floor(Math.random() * 10000000)
+        nativeId: Math.floor(Math.random() * 10000000),
+        stockCurrent: formStockEnabled ? formStockCurrent : undefined,
+        stockMin: formStockEnabled ? formStockMin : undefined,
+        pillColor: formPillColor
       };
       setMedications(prev => [newM, ...prev]);
     }
@@ -640,8 +796,14 @@ export default function App() {
     setFormNotes('');
     setFormCategory('pill');
     setFormSchedule([1, 2, 3, 4, 5, 6, 0]);
+    setFormFrequencyType('weekly');
+    setFormMonthlyDay(1);
     setFormVoicePrompt('');
-    setFormAudioTone('standard');
+    setFormAudioTone('preset_arpeggio');
+    setFormStockEnabled(false);
+    setFormStockCurrent(30);
+    setFormStockMin(5);
+    setFormPillColor('blue');
   };
 
   const startEditMedication = (med: Medication) => {
@@ -653,28 +815,33 @@ export default function App() {
     setFormNotes(med.notes);
     setFormCategory(med.category);
     setFormSchedule(med.weeklySchedule);
+    setFormFrequencyType(med.frequencyType || 'weekly');
+    setFormMonthlyDay(med.monthlyDay || 1);
     setFormVoicePrompt(med.voicePrompt);
     setFormAudioTone(med.audioTone);
+    setFormStockEnabled(med.stockCurrent !== undefined);
+    setFormStockCurrent(med.stockCurrent !== undefined ? med.stockCurrent : 30);
+    setFormStockMin(med.stockMin !== undefined ? med.stockMin : 5);
+    setFormPillColor(med.pillColor || 'blue');
     setShowAddModal(true);
   };
 
   const deleteMedication = (id: string) => {
-    if (confirm(lang === 'it' ? "Eliminare questo farmaco?" : "Delete this medication?")) {
-      const medToDelete = medications.find(m => m.id === id);
-      if (medToDelete) {
-        const android = (window as any).Android;
-        if (android) {
-          const nativeId = medToDelete.nativeId || Math.floor(Math.random() * 10000000);
-          try {
-            android.cancelAlarm(nativeId);
-            console.log(`[MediVoce] Cancelled native alarm for ${medToDelete.name} on deletion.`);
-          } catch (e) {
-            console.error("Error cancelling native alarm on deletion:", e);
-          }
+    const medToDelete = medications.find(m => m.id === id);
+    if (medToDelete) {
+      const android = (window as any).Android;
+      if (android) {
+        const nativeId = medToDelete.nativeId || Math.floor(Math.random() * 10000000);
+        try {
+          android.cancelAlarm(nativeId);
+          console.log(`[MediVoce] Cancelled native alarm for ${medToDelete.name} on deletion.`);
+        } catch (e) {
+          console.error("Error cancelling native alarm on deletion:", e);
         }
       }
-      setMedications(prev => prev.filter(m => m.id !== id));
     }
+    setMedications(prev => prev.filter(m => m.id !== id));
+    setMedToDeleteId(null);
   };
 
   // Toggles the state of taken vs skipped pill for CURRENT calendar date and specific time slot
@@ -690,18 +857,26 @@ export default function App() {
         const isSingleSlot = medTimes.length === 1;
         const isAlreadyTaken = updatedHistory[slotKey] === true || (isSingleSlot && updatedHistory[todayStr] === true);
 
+        let newStock = item.stockCurrent;
+
         if (isAlreadyTaken) {
           delete updatedHistory[slotKey];
           if (isSingleSlot) {
             delete updatedHistory[todayStr];
+          }
+          if (item.stockCurrent !== undefined) {
+            newStock = item.stockCurrent + 1;
           }
         } else {
           updatedHistory[slotKey] = true;
           if (isSingleSlot) {
             updatedHistory[todayStr] = true;
           }
+          if (item.stockCurrent !== undefined) {
+            newStock = Math.max(0, item.stockCurrent - 1);
+          }
           // Play a delightful micro sound confirming action
-          playAlarmTone('tranquillo');
+          playAlarmTone('preset_trillo');
           
           // Speak kind confirmation phrase for sensory reinforcement
           const confirmationSpeech = lang === 'it' 
@@ -709,7 +884,7 @@ export default function App() {
             : "Thank you, I have written down that you took your medicine. Excellent job!";
           // speakAnnouncement(confirmationSpeech, lang, speechSpeed, 'empathetic');
         }
-        return { ...item, history: updatedHistory };
+        return { ...item, history: updatedHistory, stockCurrent: newStock };
       }
       return item;
     }));
@@ -760,7 +935,14 @@ export default function App() {
     
     // Speak custom customized script with TTS if enabled
     if (voiceAnnounceEnabled) {
-      const textToSpeak = med.voicePrompt || `${t.speakAlert}: ${med.name}. ${med.dosage}. ${med.notes}`;
+      let textToSpeak = med.voicePrompt || `${t.speakAlert}: ${med.name}. ${med.dosage}. ${med.notes}`;
+      // Append stock warning if stock is low
+      if (med.stockCurrent !== undefined && med.stockCurrent <= (med.stockMin || 5)) {
+        const stockAlertMsg = lang === 'it' 
+          ? `Attenzione, la scorta di questo farmaco sta per esaurirsi. Rimangono solo ${med.stockCurrent} dosi.` 
+          : `Warning, stock is running low. Only ${med.stockCurrent} doses remaining.`;
+        textToSpeak = `${textToSpeak}. ${stockAlertMsg}`;
+      }
       setTimeout(() => {
         speakAnnouncement(textToSpeak, lang, speechSpeed, speechTone);
       }, 50);
@@ -775,31 +957,146 @@ export default function App() {
       return;
     }
 
+    // 1. SILENCE DEVICE: Stop ongoing speech synthesis immediately so it doesn't overlap or interfere with the mic
+    try {
+      stopSpeaking();
+    } catch (err) {
+      console.warn("Failed to stop speech synthesis", err);
+    }
+
+    // 2. SILENCE DEVICE: Stop any active device alarm sounds from the Android interface
+    const android = (window as any).Android;
+    if (android && android.stopDeviceSound) {
+      try {
+        android.stopDeviceSound();
+      } catch (err) {
+        console.warn("Failed to stop native device sound", err);
+      }
+    }
+
+    // Native Android mic permission check/request
+    if (android && typeof android.hasRecordAudioPermission === 'function') {
+      try {
+        if (!android.hasRecordAudioPermission()) {
+          console.log("[MediVoce] Native RECORD_AUDIO permission not granted yet. Requesting...");
+          android.requestRecordAudioPermission();
+          setSpeechConfirmError(
+            lang === 'it' 
+              ? "Consenti il permesso del microfono quando richiesto dal dispositivo, quindi riprova." 
+              : "Please grant microphone permission when prompted by your device, then try again."
+          );
+          setIsListeningForConfirm(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Failed native permission check", err);
+      }
+    }
+
+    setSpeechConfirmError('');
     setIsListeningForConfirm(true);
+
     const recognition = new SpeechRecognition();
-    recognition.lang = lang === 'it' ? 'it-IT' : 'en-US';
+    
+    // Set appropriate language locale
+    if (lang === 'es') {
+      recognition.lang = 'es-ES';
+    } else if (lang === 'fr') {
+      recognition.lang = 'fr-FR';
+    } else if (lang === 'it') {
+      recognition.lang = 'it-IT';
+    } else {
+      recognition.lang = 'en-US';
+    }
+
     recognition.continuous = false;
+    recognition.interimResults = false;
     
     recognition.onresult = (e: any) => {
-      const phrase = e.results[0][0].transcript.toLowerCase();
+      if (!e.results || e.results.length === 0) return;
+      const phrase = e.results[0][0].transcript.toLowerCase().trim();
       console.log("Captured confirm: ", phrase);
       
-      const isPositive = phrase.includes('preso') || phrase.includes('si') || phrase.includes('sì') || phrase.includes('fatto') || phrase.includes('yes') || phrase.includes('taken') || phrase.includes('ok');
+      // Robust multi-language confirmation vocabulary
+      const isPositive = 
+        phrase.includes('preso') || 
+        phrase.includes('presa') || 
+        phrase.includes('presi') || 
+        phrase.includes('prese') || 
+        phrase.includes('si') || 
+        phrase.includes('sì') || 
+        phrase.includes('fatto') || 
+        phrase.includes('confermo') || 
+        phrase.includes('conferma') || 
+        phrase.includes('assunto') || 
+        phrase.includes('assunta') || 
+        phrase.includes('va bene') || 
+        phrase.includes('vabene') || 
+        phrase.includes('ho preso') || 
+        phrase.includes('ho presa') || 
+        phrase.includes('yes') || 
+        phrase.includes('taken') || 
+        phrase.includes('done') || 
+        phrase.includes('confirm') || 
+        phrase.includes('confirmed') || 
+        phrase.includes('ok') || 
+        phrase.includes('okay') || 
+        phrase.includes('sí') || 
+        phrase.includes('tomado') || 
+        phrase.includes('tomada') || 
+        phrase.includes('hecho') || 
+        phrase.includes('oui') || 
+        phrase.includes('pris') || 
+        phrase.includes('prise') || 
+        phrase.includes('fait');
 
       if (isPositive && activeVoiceReminder) {
         // Mark as taken
         toggleTakenStatusForSlot(activeVoiceReminder, activeVoiceReminderSlot);
         setActiveVoiceReminder(null);
       } else {
-        // Try again speech
-        // speakAnnouncement(lang === 'it' ? "Non ho capito bene, puoi ripetere o toccare il tasto arancione?" : "I didn't catch that, please try again or tap the button.", lang, speechSpeed);
+        // Did not match
+        setSpeechConfirmError(
+          lang === 'it' 
+            ? `Hai detto: "${phrase}". Pronuncia chiaramente 'Preso' o 'Sì'.` 
+            : `You said: "${phrase}". Please speak clearly 'Taken' or 'Yes'.`
+        );
       }
       setIsListeningForConfirm(false);
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event: any) => {
+      console.error("Speech confirmation error:", event.error);
+      const errType = event.error;
+      
+      if (errType === 'not-allowed') {
+        setSpeechConfirmError(
+          lang === 'it' 
+            ? "Permesso microfono negato. Consenti l'accesso nelle impostazioni." 
+            : "Microphone permission denied. Allow access in settings."
+        );
+      } else if (errType === 'no-speech') {
+        setSpeechConfirmError(
+          lang === 'it' 
+            ? "Nessuna voce rilevata. Parla a voce più alta." 
+            : "No speech detected. Please speak louder."
+        );
+      } else if (errType === 'network') {
+        setSpeechConfirmError(
+          lang === 'it' 
+            ? "Errore di connessione di rete." 
+            : "Network connection error."
+        );
+      } else {
+        setSpeechConfirmError(
+          lang === 'it' 
+            ? "Errore microfono o non ho capito, riprova." 
+            : "Microphone error or misunderstood, try again."
+        );
+      }
       setIsListeningForConfirm(false);
     };
+
     recognition.onend = () => {
       setIsListeningForConfirm(false);
     };
@@ -808,6 +1105,11 @@ export default function App() {
       recognition.start();
     } catch (e) {
       console.warn("Could not start speech recognition:", e);
+      setSpeechConfirmError(
+        lang === 'it' 
+          ? "Impossibile attivare il microfono." 
+          : "Could not activate microphone."
+      );
       setIsListeningForConfirm(false);
     }
   };
@@ -845,7 +1147,7 @@ export default function App() {
 
   // Computed values for Daily Summary (Riepilogo Giornaliero)
   const todayStr = getLocalIsoDate(currentTime);
-  const todayMeds = medications.filter(m => m.isActive && m.weeklySchedule.includes(todayWeekdayVal));
+  const todayMeds = medications.filter(m => m.isActive && isScheduledOnDate(m, currentTime));
 
   const todayDoses: { med: Medication; timeSlot: string; isTaken: boolean }[] = [];
 
@@ -880,6 +1182,16 @@ export default function App() {
 
   const renderMedicationRow = (med: Medication) => {
     const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+    
+    const colorMap: {[key: string]: { bg: string, text: string, border: string }} = {
+      blue: { bg: 'bg-blue-50 text-blue-800', text: 'text-blue-600', border: 'border-blue-100' },
+      red: { bg: 'bg-rose-50 text-rose-800', text: 'text-rose-600', border: 'border-rose-100' },
+      green: { bg: 'bg-emerald-50 text-emerald-800', text: 'text-emerald-600', border: 'border-emerald-100' },
+      orange: { bg: 'bg-amber-50 text-amber-800', text: 'text-amber-600', border: 'border-amber-100' },
+      purple: { bg: 'bg-purple-50 text-purple-800', text: 'text-purple-600', border: 'border-purple-100' },
+    };
+    const colorSet = colorMap[med.pillColor || 'blue'] || colorMap.blue;
+
     return (
       <div 
         key={med.id} 
@@ -890,11 +1202,22 @@ export default function App() {
         <div className="flex justify-between items-start gap-2">
           {/* Left info */}
           <div className="flex items-start gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold shrink-0 bg-slate-100`}>
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold shrink-0 border ${colorSet.bg} ${colorSet.text} ${colorSet.border}`}>
               {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
             </div>
             <div>
-              <h5 className="font-extrabold text-slate-800 leading-tight">{med.name}</h5>
+              <h5 className="font-extrabold text-slate-800 leading-tight flex items-center gap-2">
+                <span>{med.name}</span>
+                {med.stockCurrent !== undefined && (
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-black leading-none ${
+                    med.stockCurrent <= (med.stockMin || 5) 
+                      ? 'bg-rose-100 text-rose-700 animate-pulse' 
+                      : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    📦 {med.stockCurrent} pz {med.stockCurrent <= (med.stockMin || 5) ? '⚠️' : ''}
+                  </span>
+                )}
+              </h5>
               <p className="text-3xs text-slate-400 font-extrabold mt-0.5">{med.dosage}</p>
             </div>
           </div>
@@ -933,7 +1256,15 @@ export default function App() {
         {/* Action buttons (Edit/Delete) */}
         <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
           <div className="text-[11px] text-slate-400 font-medium">
-            {lang === 'it' ? `Pillole programmate` : `Scheduled pills`}
+            {med.frequencyType === 'monthly' ? (
+              <span className="text-[11px] text-[#E58045] font-bold">
+                📅 {lang === 'it' ? `Giorno ${med.monthlyDay} del mese` : `Day ${med.monthlyDay} of the month`}
+              </span>
+            ) : (
+              <span>
+                🔄 {lang === 'it' ? `Settimanale` : `Settimanale`}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -946,7 +1277,7 @@ export default function App() {
             </button>
             <button
               id={`delete-med-manage-${med.id}`}
-              onClick={() => deleteMedication(med.id)}
+              onClick={() => setMedToDeleteId(med.id)}
               className="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold rounded-xl transition-all flex items-center gap-1"
             >
               <span>🗑️</span>
@@ -991,13 +1322,33 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Heartbeat radar ripple animation */}
-              <div className="relative mx-auto my-auto w-36 h-36 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-amber-500/10 animate-ping" />
-                <div className="absolute inset-4 rounded-full bg-[#E58045]/20 animate-pulse" />
-                <div className="w-20 h-20 rounded-full bg-[#E58045] flex items-center justify-center text-white shadow-xl">
-                  {(activeVoiceReminder.category === 'pill' || activeVoiceReminder.category === 'capsule') && <Pill className="w-10 h-10" />}
-                  {(activeVoiceReminder.category !== 'pill' && activeVoiceReminder.category !== 'capsule') && <Volume2 className="w-10 h-10" />}
+              {/* Heartbeat radar ripple / Sound wave animation */}
+              <div className="flex flex-col items-center justify-center my-auto py-2 space-y-3 shrink-0">
+                <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+                  <div className={`absolute inset-0 rounded-full bg-amber-500/10 ${isSpeaking ? 'animate-ping' : ''}`} />
+                  <div className="absolute inset-4 rounded-full bg-[#E58045]/20 animate-pulse" />
+                  <div className="w-20 h-20 rounded-full bg-[#E58045] flex items-center justify-center text-white shadow-xl z-10">
+                    {(activeVoiceReminder.category === 'pill' || activeVoiceReminder.category === 'capsule') && <Pill className="w-10 h-10" />}
+                    {(activeVoiceReminder.category !== 'pill' && activeVoiceReminder.category !== 'capsule') && <Volume2 className="w-10 h-10" />}
+                  </div>
+                </div>
+
+                {/* Animated Sound Wave Visualizer */}
+                <div className="text-center w-full max-w-xs transition-all duration-300">
+                  <div className="flex items-end justify-center gap-1 h-12 px-6 py-1 bg-amber-950/20 rounded-2xl border border-amber-900/10 w-fit mx-auto">
+                    {['h-3', 'h-6', 'h-9', 'h-4', 'h-8', 'h-10', 'h-5', 'h-3', 'h-7', 'h-10', 'h-6', 'h-8', 'h-4', 'h-7', 'h-10', 'h-3'].map((height, i) => {
+                      const delayClass = `animation-delay-${(i * 75) % 900}`;
+                      return (
+                        <div
+                          key={i}
+                          className={`w-1 rounded-full bg-amber-400 ${height} ${isSpeaking ? 'animate-soundwave' : 'scale-y-[0.2]'} ${delayClass} transition-all duration-300`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-500/60 uppercase tracking-widest mt-1.5 block">
+                    {isSpeaking ? (lang === 'it' ? 'Assistente parla...' : 'Assistant speaking...') : (lang === 'it' ? 'In attesa...' : 'Waiting...')}
+                  </span>
                 </div>
               </div>
 
@@ -1012,6 +1363,12 @@ export default function App() {
                     ? (lang === 'it' ? "🎙️ Ascolto attivo... Pronuncia 'Preso' o 'Sì'" : "🎙️ Listening... Say 'Yes' or 'Taken'") 
                     : (lang === 'it' ? "Dì 'Preso' o usa i controlli sotto" : "Say 'Taken' or use buttons below")}
                 </div>
+
+                {speechConfirmError && (
+                  <div className="text-xs text-rose-400 font-bold bg-rose-950/40 p-2.5 rounded-xl border border-rose-900/30 max-w-xs mx-auto animate-pulse">
+                    ⚠️ {speechConfirmError}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {/* Speech Trigger mic button */}
@@ -1044,8 +1401,17 @@ export default function App() {
                 <button
                   id="rimanda-alert-btn"
                   onClick={() => {
+                    if (activeVoiceReminder) {
+                      const todayStr = getLocalIsoDate();
+                      const actualSlot = activeVoiceReminderSlot || activeVoiceReminder.times?.[0] || activeVoiceReminder.time;
+                      const slotKey = `${todayStr}_${actualSlot}`;
+                      const dismissedKey = `${activeVoiceReminder.id}_${slotKey}`;
+                      dismissedAutoTriggersRef.current[dismissedKey] = {
+                        dismissedAt: Date.now(),
+                        type: 'snooze'
+                      };
+                    }
                     setActiveVoiceReminder(null);
-                    // speakAnnouncement(lang === 'it' ? "Allarme rimandato di 5 minuti." : "Reminder snoozed for 5 minutes.", lang, speechSpeed);
                   }}
                   className="text-xs text-gray-400 hover:text-white font-bold transition-colors pt-2 block mx-auto underline"
                 >
@@ -1175,18 +1541,20 @@ export default function App() {
                                </div>
                              </div>
                              {/* Options popup edit/del */}
-                             <div className="flex gap-1 shrink-0">
+                             <div className="flex gap-2 shrink-0 items-center">
                                <button
                                  id={`edit-med-btn-${med.id}`}
                                  onClick={() => startEditMedication(med)}
-                                 className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-base"
+                                 className="p-1.5 hover:bg-gray-100 rounded-xl transition-all text-2xl cursor-pointer"
+                                 title={lang === 'it' ? "Modifica" : "Edit"}
                                >
                                  ✏️
                                </button>
                                <button
                                  id={`delete-med-btn-${med.id}`}
-                                 onClick={() => deleteMedication(med.id)}
-                                 className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors text-base"
+                                 onClick={() => setMedToDeleteId(med.id)}
+                                 className="p-1.5 hover:bg-rose-50 rounded-xl transition-all text-2xl cursor-pointer"
+                                 title={lang === 'it' ? "Elimina" : "Delete"}
                                >
                                  🗑️
                                </button>
@@ -1233,47 +1601,7 @@ export default function App() {
                    </div>
                  )}
 
-                {/* ADVANCED VOICE LISTEN INTEGRATE WIDGET (GEOMETRIC BALANCE) */}
-                <div className={`p-4 rounded-3xl space-y-3.5 text-center mt-6 ${theme.bgLight}/65 border ${theme.borderLight}`}>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-[pulse_1.2s_infinite]" />
-                    <span className="text-3xs font-black text-[#1E3A8A] uppercase tracking-wider">
-                      {lang === 'it' ? "Ascolto in Standby" : "Vocal Standby Active"}
-                    </span>
-                  </div>
 
-                  {/* Pulsing microphone balance circle */}
-                  <div className="relative mx-auto w-14 h-14 flex items-center justify-center">
-                    <div className={`absolute inset-0 rounded-full ${theme.pingBg} animate-ping`} />
-                    <div className={`absolute inset-2 rounded-full ${theme.pulseBg} animate-pulse`} />
-                    <button
-                      id="agenda-voice-listening-trigger"
-                      onClick={() => {
-                        const nextMed = medications.find(m => m.isActive && !(m.history || {})[getLocalIsoDate()]);
-                        if (nextMed) {
-                          activateVoiceRemindSystem(nextMed);
-                        } else {
-                          // speakAnnouncement(lang === 'it' ? "Tutti i farmaci di oggi sono completati!" : "All of today's doses are taken!", lang, speechSpeed);
-                        }
-                      }}
-                      className={`relative w-10 h-10 rounded-full ${theme.primary} ${theme.primaryHover} text-white flex items-center justify-center shadow-md ${theme.shadowSm} transition-all cursor-pointer`}
-                      title="Sperimenta controllo vocale"
-                    >
-                      <Mic className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-extrabold text-[#1E293B]">
-                      {lang === 'it' ? "Dì 'Sì, preso' o 'Ho fatto' per registrare" : "Say 'Yes, taken' or 'Done' to record"}
-                    </div>
-                    <div className="text-3xs text-[#64748B] font-semibold leading-relaxed">
-                      {lang === 'it' 
-                        ? "Premi il microfono sopra per simulare il promemoria vocale assistito." 
-                        : "Press the microphone icon above to simulate the vocal reminder assistant."}
-                    </div>
-                  </div>
-                </div>
 
                 {/* Inline History Adherence and Symptoms Notes inside the Daily Agenda View */}
                 <div className="pt-6 border-t border-slate-200/80 space-y-5">
@@ -1322,7 +1650,7 @@ export default function App() {
                       setFormCategory('pill');
                       setFormSchedule([1, 2, 3, 4, 5, 6, 0]);
                       setFormVoicePrompt('');
-                      setFormAudioTone('standard');
+                      setFormAudioTone('preset_arpeggio');
                       setShowAddModal(true);
                     }}
                     className={`py-2 px-3.5 rounded-xl ${theme.primary} ${theme.primaryHover} text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-sm`}
@@ -1510,9 +1838,9 @@ export default function App() {
                   <button
                     id="trigger-settings-voice-test"
                     onClick={triggerVoiceTest}
-                    className={`w-full py-3 px-4 bg-[#F8FAFC] hover:bg-[#F1F5F9] ${theme.text} font-bold rounded-xl border border-[#E2E8F0] transition-colors flex justify-center items-center gap-2`}
+                    className={`w-full py-4 px-5 bg-white hover:bg-slate-50 active:bg-slate-100 ${theme.text} font-extrabold text-sm rounded-xl border-2 border-slate-200 hover:border-slate-300 active:border-slate-400 shadow-sm transition-all flex justify-center items-center gap-2.5 active:scale-[0.97] cursor-pointer`}
                   >
-                    <Volume2 className="w-4 h-4" />
+                    <Volume2 className="w-5 h-5 shrink-0" />
                     <span>{t.testVoiceBtn}</span>
                   </button>
 
@@ -1525,11 +1853,46 @@ export default function App() {
                         : "Welcome to the tutorial. When you hear the medicine alert, say 'Yes' or 'Taken' to confirm. Or, you can tap the red button on the screen to snooze the alarm for a few minutes.";
                       speakAnnouncement(tutorialText, lang, speechSpeed, speechTone);
                     }}
-                    className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] primary w-full mt-3 flex justify-center gap-2"
+                    className={`w-full py-4 px-5 bg-white hover:bg-slate-50 active:bg-slate-100 ${theme.text} font-extrabold text-sm rounded-xl border-2 border-slate-200 hover:border-slate-300 active:border-slate-400 shadow-sm transition-all flex justify-center items-center gap-2.5 mt-3 active:scale-[0.97] cursor-pointer`}
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-5 h-5 shrink-0" />
                     <span>{lang === 'it' ? "Ascolta Tutorial Vocale" : "Listen to Voice Tutorial"}</span>
                   </button>
+
+                  {/* Dynamic Voice Soundwave Indicator */}
+                  <div className={`mt-4 p-3.5 rounded-2xl border transition-all duration-300 ${
+                    isSpeaking 
+                      ? `${theme.bgLight} ${theme.borderLight} scale-100 shadow-xs` 
+                      : 'bg-white border-gray-150 scale-95 opacity-60'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-end justify-center gap-0.5 h-6 w-20 shrink-0">
+                        {['h-2', 'h-4', 'h-6', 'h-3', 'h-5', 'h-6', 'h-2', 'h-4'].map((height, i) => {
+                          const delayClass = `animation-delay-${(i * 100) % 900}`;
+                          return (
+                            <div
+                              key={i}
+                              className={`w-1 rounded-full ${isSpeaking ? `${theme.bg} animate-soundwave` : 'bg-slate-300 scale-y-[0.3]'} ${height} ${delayClass} transition-all duration-300`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className={`text-xs font-black leading-tight ${isSpeaking ? theme.text : 'text-gray-500'}`}>
+                          {isSpeaking 
+                            ? (lang === 'it' ? "Riproduzione Vocale Attiva" : "Vocal Synthesis Active")
+                            : (lang === 'it' ? "Feedback Vocale Inattivo" : "Vocal Feedback Inactive")
+                          }
+                        </p>
+                        <p className="text-[10px] font-bold text-gray-450 leading-normal mt-0.5">
+                          {isSpeaking 
+                            ? (lang === 'it' ? "L'assistente sta parlando..." : "The voice is speaking...")
+                            : (lang === 'it' ? "Avvia un test vocale per ascoltare" : "Play a voice test to hear")
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* NOTIFICATIONS MOBILE PREFERENCES */}
@@ -1537,36 +1900,7 @@ export default function App() {
                   <h3 className={`text-xl font-extrabold mb-2 ${appTheme === 'dark' ? 'text-white' : 'text-[#1E3A8A]'}`}>{t.ringtoneLabel}</h3>
 
 
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    <button
-                      id="ringtone-test-tranquillo"
-                      onClick={() => triggerAudioTest('tranquillo')}
-                      className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      🕊️ Tranquillo
-                    </button>
-                    <button
-                      id="ringtone-test-campana"
-                      onClick={() => triggerAudioTest('campana')}
-                      className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      🔔 Campana
-                    </button>
-                    <button
-                      id="ringtone-test-standard"
-                      onClick={() => triggerAudioTest('standard')}
-                      className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      📞 Telefono
-                    </button>
-                    <button
-                      id="ringtone-test-sirena"
-                      onClick={() => triggerAudioTest('sirena')}
-                      className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      🚨 Sirena Urgente
-                    </button>
-                  </div>
+
                   
                   {/* DEVICE SOUNDS IMPORT BUTTON */}
                   <button
@@ -1574,9 +1908,9 @@ export default function App() {
                     onClick={() => {
                       setShowImportSoundsModal(true);
                     }}
-                    className="bg-[#F8FAFC] border-2 border-[#E2E8F0] shadow-sm px-4 py-3 rounded-xl font-extrabold text-[#1E293B] w-full mt-3 flex justify-center gap-2 border-dashed hover:bg-slate-50 transition-all cursor-pointer"
+                    className="w-full py-4 px-5 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-[#1E293B] font-extrabold text-sm rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-450 active:border-slate-500 shadow-sm transition-all flex justify-center items-center gap-2.5 mt-3 active:scale-[0.97] cursor-pointer"
                   >
-                    <Volume2 className="w-4 h-4" />
+                    <Volume2 className="w-5 h-5 text-slate-500 shrink-0" />
                     <span>{lang === 'it' ? "Importa Suoni Dispositivo (Nativo)" : "Import Device Sounds (Native)"}</span>
                   </button>
                 </div>
@@ -1706,17 +2040,6 @@ export default function App() {
                       <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.vibrationSetting}</span>
                       <div className="flex items-center gap-2.5">
                         <button 
-                          id="btn-test-vibration"
-                          type="button"
-                          onClick={() => {
-                            // Trigger a test pulse pattern, forcing it to play so they can feel it
-                            triggerDeviceVibration([300, 120, 300], true);
-                          }}
-                          className="px-2.5 py-1 text-3xs font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg transition-all flex items-center gap-1 shrink-0"
-                        >
-                          📳 {lang === 'it' ? "Prova" : "Test"}
-                        </button>
-                        <button 
                           id="toggle-vibration"
                           onClick={() => {
                             const nextState = !vibrationEnabled;
@@ -1819,7 +2142,7 @@ export default function App() {
                     className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
                   >
                     <Heart className="w-4 h-4" />
-                    <span>{lang === 'it' ? "Dona 2,99€" : "Donate 2.99€"}</span>
+                    <span>{lang === 'it' ? "Dona 1,99€" : "Donate 1.99€"}</span>
                   </button>
                 </div>
 
@@ -1837,6 +2160,38 @@ export default function App() {
           </div>
 
         </div>
+
+        {/* GLOBAL SPEECH ANIMATED SOUNDWAVE FLOATING BAR */}
+        <AnimatePresence>
+          {isSpeaking && !activeVoiceReminder && (
+            <motion.div
+              id="global-speech-feedback-bar"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              className={`absolute bottom-[86px] inset-x-4 h-12 rounded-2xl shadow-lg border flex items-center justify-between px-4 z-40 bg-white/95 backdrop-blur-xs ${theme.borderLight}`}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                <span className={`text-[11px] font-black tracking-tight ${theme.text}`}>
+                  {lang === 'it' ? "Sintesi Vocale Attiva..." : "Speaking Announcement..."}
+                </span>
+              </div>
+              
+              <div className="flex items-end gap-0.5 h-5">
+                {['h-2', 'h-4', 'h-5', 'h-3', 'h-5', 'h-4', 'h-2', 'h-4', 'h-5', 'h-3', 'h-5', 'h-2'].map((height, i) => {
+                  const delayClass = `animation-delay-${(i * 75) % 900}`;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-0.5 rounded-full ${theme.bg} ${height} animate-soundwave ${delayClass}`}
+                    />
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* PERSISTENT TAB BAR FOOTER */}
         <nav id="bottom-accessible-nav" className={`absolute bottom-0 inset-x-0 h-20 border-t z-40 flex justify-around items-center px-4 ${appTheme === 'dark' ? 'bg-slate-900 border-slate-700' : appTheme === 'warm' ? 'bg-orange-100 border-orange-200' : 'bg-[#F8FAFC] border-[#E2E8F0]'}`}>
@@ -1887,6 +2242,50 @@ export default function App() {
 
         {/* ADD / EDIT MEDICATION MODAL OVERLAY */}
         <AnimatePresence>
+
+          {medToDeleteId && (
+            <motion.div
+              id="delete-confirm-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/55 z-50 flex items-center justify-center p-5"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-3xl w-full max-w-[280px] p-5 space-y-4 text-center border border-slate-100 shadow-2xl"
+              >
+                <div className="flex justify-center">
+                  <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 text-2xl">
+                    🗑️
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-slate-800 leading-snug">
+                    {lang === 'it' ? "Eliminare questo farmaco?" : "Delete this medication?"}
+                  </h3>
+                </div>
+                <div className="flex gap-2.5 pt-1">
+                  <button
+                    id="cancel-delete-btn"
+                    onClick={() => setMedToDeleteId(null)}
+                    className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition-all cursor-pointer text-xs"
+                  >
+                    {lang === 'it' ? "ANNULLA" : "CANCEL"}
+                  </button>
+                  <button
+                    id="confirm-delete-btn"
+                    onClick={() => deleteMedication(medToDeleteId)}
+                    className="flex-1 py-2.5 px-3 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-rose-200 text-xs"
+                  >
+                    {lang === 'it' ? "OK" : "OK"}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
 
           {showAddModal && (
             <motion.div
@@ -2025,46 +2424,96 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Frequency Type Selector */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 uppercase block">{t.frequencyLabel}</label>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase block">
+                      {lang === 'it' ? "Frequenza Promemoria" : "Reminder Frequency"}
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
                       <button
                         type="button"
-                        onClick={() => setFormSchedule([0,1,2,3,4,5,6])}
+                        onClick={() => setFormFrequencyType('weekly')}
                         className={`py-2 px-3 rounded-xl font-bold text-xs border-2 transition-all ${
-                          formSchedule.length === 7 
-                            ? 'bg-[#E58045] text-white border-[#E58045]' 
-                            : 'bg-[#FCFAF7] text-gray-600 border-gray-200'
+                          formFrequencyType === 'weekly'
+                            ? 'bg-[#E58045] text-white border-[#E58045]'
+                            : 'bg-[#FCFAF7] text-gray-600 border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        {t.allDays}
+                        🔄 {lang === 'it' ? "Settimanale" : "Weekly"}
                       </button>
-                      {[1, 2, 3, 4, 5, 6, 0].map((dayValue) => {
-                        const dayNames = [t.sun, t.mon, t.tue, t.wed, t.thu, t.fri, t.sat];
-                        const isSelected = formSchedule.includes(dayValue);
-                        return (
-                          <button
-                            key={dayValue}
-                            type="button"
-                            onClick={() => {
-                              if (isSelected && formSchedule.length > 1) {
-                                setFormSchedule(prev => prev.filter(d => d !== dayValue));
-                              } else if (!isSelected) {
-                                setFormSchedule(prev => [...prev, dayValue]);
-                              }
-                            }}
-                            className={`w-8 h-8 flex items-center justify-center rounded-lg font-black text-xs border-2 transition-all ${
-                              isSelected 
-                                ? 'bg-[#E58045] text-white border-[#E58045]' 
-                                : 'bg-[#FCFAF7] text-gray-600 border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            {dayNames[dayValue].charAt(0)}
-                          </button>
-                        );
-                      })}
+                      <button
+                        type="button"
+                        onClick={() => setFormFrequencyType('monthly')}
+                        className={`py-2 px-3 rounded-xl font-bold text-xs border-2 transition-all ${
+                          formFrequencyType === 'monthly'
+                            ? 'bg-[#E58045] text-white border-[#E58045]'
+                            : 'bg-[#FCFAF7] text-gray-600 border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        📅 {lang === 'it' ? "Mensile" : "Monthly"}
+                      </button>
                     </div>
                   </div>
+
+                  {formFrequencyType === 'weekly' ? (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-500 uppercase block">{t.frequencyLabel}</label>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormSchedule([0,1,2,3,4,5,6])}
+                          className={`py-2 px-3 rounded-xl font-bold text-xs border-2 transition-all ${
+                            formSchedule.length === 7 
+                              ? 'bg-[#E58045] text-white border-[#E58045]' 
+                              : 'bg-[#FCFAF7] text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          {t.allDays}
+                        </button>
+                        {[1, 2, 3, 4, 5, 6, 0].map((dayValue) => {
+                          const dayNames = [t.sun, t.mon, t.tue, t.wed, t.thu, t.fri, t.sat];
+                          const isSelected = formSchedule.includes(dayValue);
+                          return (
+                            <button
+                              key={dayValue}
+                              type="button"
+                              onClick={() => {
+                                if (isSelected && formSchedule.length > 1) {
+                                  setFormSchedule(prev => prev.filter(d => d !== dayValue));
+                                } else if (!isSelected) {
+                                  setFormSchedule(prev => [...prev, dayValue]);
+                                }
+                              }}
+                              className={`w-8 h-8 flex items-center justify-center rounded-lg font-black text-xs border-2 transition-all ${
+                                isSelected 
+                                  ? 'bg-[#E58045] text-white border-[#E58045]' 
+                                  : 'bg-[#FCFAF7] text-gray-600 border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              {dayNames[dayValue].charAt(0)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-500 uppercase block">
+                        {lang === 'it' ? "Giorno del mese per il promemoria" : "Day of the month for reminder"}
+                      </label>
+                      <select
+                        value={formMonthlyDay}
+                        onChange={(e) => setFormMonthlyDay(Number(e.target.value))}
+                        className="w-full p-3 rounded-xl border-2 border-gray-200 bg-[#FCFAF7] focus:outline-none focus:border-[#E58045] text-sm"
+                      >
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                          <option key={d} value={d}>
+                            {d} {lang === 'it' ? 'ogni mese' : 'of every month'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">{t.instructionsLabel}</label>
@@ -2091,31 +2540,71 @@ export default function App() {
                       Se lasciato vuoto, l'app genererà un annuncio base scandendo ordinatamente il nome del farmaco.
                     </span>
                   </div>
+                  {/* Stock/Inventory Management Block */}
+                  <div className="space-y-2 bg-[#FCFAF7] p-3.5 rounded-2xl border border-gray-150 text-left">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-extrabold text-gray-700 uppercase block">{lang === 'it' ? "Gestisci Scorte (Inventario)" : "Manage Inventory"}</span>
+                        <span className="text-3xs text-gray-400 block font-semibold">{lang === 'it' ? "Allarme automatico se le scorte terminano" : "Voice alerts when supplies run low"}</span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+                        <input
+                          type="checkbox"
+                          checked={formStockEnabled}
+                          onChange={(e) => setFormStockEnabled(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                    </div>
+                    {formStockEnabled && (
+                      <div className="grid grid-cols-2 gap-3 pt-1.5 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-3xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Pillole Rimaste" : "Remaining Pills"}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formStockCurrent}
+                            onChange={(e) => setFormStockCurrent(Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-full p-2.5 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-[#E58045] text-xs font-extrabold text-center"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-3xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Soglia Minima Allarme" : "Low Stock Alert"}</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formStockMin}
+                            onChange={(e) => setFormStockMin(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-full p-2.5 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-[#E58045] text-xs font-extrabold text-center"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase block">Suono della Sveglia</label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[
-                        { key: 'standard', title: '⏱️ Standard' },
-                        { key: 'campana', title: '🔔 Campana' },
-                        { key: 'tranquillo', title: '🕊️ Dolce' },
-                        { key: 'sirena', title: '🚨 Sirena' },
-                        ...importedSounds.map(s => ({ key: `custom_${s.id}`, title: `🎵 ${s.name.length > 8 ? s.name.substring(0, 7) + '..' : s.name}` }))
-                      ].map((item) => (
+                  {/* Pill Color Identifier Selector */}
+                  <div className="space-y-2 text-left">
+                    <span className="text-xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Colore Identificativo della Pillola" : "Medication Color Accent"}</span>
+                    <div className="flex gap-3">
+                      {([
+                        { key: 'blue', color: 'bg-blue-500 border-blue-600', text: 'it-Blu' },
+                        { key: 'red', color: 'bg-rose-500 border-rose-600', text: 'it-Rosso' },
+                        { key: 'green', color: 'bg-emerald-500 border-emerald-600', text: 'it-Verde' },
+                        { key: 'orange', color: 'bg-amber-500 border-amber-600', text: 'it-Arancione' },
+                        { key: 'purple', color: 'bg-purple-500 border-purple-600', text: 'it-Viola' },
+                      ] as const).map((col) => (
                         <button
-                          key={item.key}
+                          key={col.key}
                           type="button"
-                          onClick={() => {
-                            setFormAudioTone(item.key);
-                            playAlarmTone(item.key);
-                          }}
-                          className={`py-2 px-1 rounded-xl border text-center transition-all text-3xs font-extrabold truncate ${
-                            formAudioTone === item.key 
-                              ? 'bg-amber-100 text-amber-900 border-[#E58045]' 
-                              : 'bg-[#FCFAF7] border-gray-200 text-gray-600'
+                          onClick={() => setFormPillColor(col.key)}
+                          className={`w-9 h-9 rounded-full border-3 transition-all flex items-center justify-center ${col.color} ${
+                            formPillColor === col.key ? 'scale-110 shadow-md ring-2 ring-[#E58045]/40 border-white' : 'border-transparent opacity-80 hover:opacity-100'
                           }`}
                         >
-                          {item.title}
+                          {formPillColor === col.key && (
+                            <span className="text-white text-xs font-black">✓</span>
+                          )}
                         </button>
                       ))}
                     </div>

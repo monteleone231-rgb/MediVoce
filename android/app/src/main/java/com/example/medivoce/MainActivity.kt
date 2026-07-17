@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -15,13 +16,73 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 
 private const val TAG_CONSOLE = "MediVoceConsole"
 private const val TAG_ERROR = "MediVoceWebViewError"
 private const val TAG_NATIVE = "MediVoceNative"
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var webView: WebView
+    private var tts: TextToSpeech? = null
+    private var isTtsInitialized = false
+    @Volatile
+    var cachedSoundsJson: String = "[]"
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            isTtsInitialized = true
+            Log.d(TAG_NATIVE, "TextToSpeech successfully initialized.")
+            tts?.language = Locale.ITALIAN
+        } else {
+            Log.e(TAG_NATIVE, "Failed to initialize TextToSpeech (status: $status)")
+        }
+    }
+
+    fun speak(text: String, lang: String, rate: Float, tone: String) {
+        if (!isTtsInitialized || tts == null) {
+            Log.e(TAG_NATIVE, "speak: TTS not initialized or is null")
+            return
+        }
+        try {
+            val locale = if (lang.lowercase().startsWith("it")) Locale.ITALIAN else Locale.ENGLISH
+            tts?.language = locale
+            tts?.setSpeechRate(rate)
+            
+            val pitch = if (tone == "empathetic") 1.2f else 1.0f
+            tts?.setPitch(pitch)
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "medivoce_speech")
+            } else {
+                @Suppress("DEPRECATION")
+                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null)
+            }
+            Log.d(TAG_NATIVE, "Native TTS speaking: $text")
+        } catch (e: Exception) {
+            Log.e(TAG_NATIVE, "Error during speak", e)
+        }
+    }
+
+    fun stopSpeaking() {
+        try {
+            tts?.stop()
+            Log.d(TAG_NATIVE, "Stopped native speaking")
+        } catch (e: Exception) {
+            Log.e(TAG_NATIVE, "Error stopping native TTS", e)
+        }
+    }
+
+    override fun onDestroy() {
+        try {
+            tts?.stop()
+            tts?.shutdown()
+        } catch (e: Exception) {
+            Log.e(TAG_NATIVE, "Error on destroying TextToSpeech", e)
+        }
+        super.onDestroy()
+    }
 
     private fun isTrustedUrl(url: String): Boolean {
         val uri = Uri.parse(url)
@@ -34,6 +95,36 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        try {
+            tts = TextToSpeech(this, this)
+        } catch (e: Exception) {
+            Log.e(TAG_NATIVE, "Error creating TextToSpeech", e)
+        }
+
+        // Preload device ringtones and notification sounds in a background thread to prevent UI freezing
+        Thread {
+            val ringtonesList = org.json.JSONArray()
+            try {
+                val rm = android.media.RingtoneManager(this)
+                rm.setType(android.media.RingtoneManager.TYPE_NOTIFICATION or android.media.RingtoneManager.TYPE_RINGTONE)
+                val cursor = rm.cursor
+                while (cursor.moveToNext()) {
+                    val title = cursor.getString(android.media.RingtoneManager.TITLE_COLUMN_INDEX)
+                    val uri = rm.getRingtoneUri(cursor.position)
+                    if (uri != null) {
+                        val obj = org.json.JSONObject()
+                        obj.put("title", title)
+                        obj.put("uri", uri.toString())
+                        ringtonesList.put(obj)
+                    }
+                }
+                cachedSoundsJson = ringtonesList.toString()
+                Log.d(TAG_NATIVE, "Preloaded ${ringtonesList.length()} device sounds in background.")
+            } catch (e: Exception) {
+                Log.e(TAG_NATIVE, "Error preloading device sounds in background", e)
+            }
+        }.start()
         
         webView = WebView(this).apply {
             settings.apply {
@@ -52,6 +143,20 @@ class MainActivity : AppCompatActivity() {
                         Log.d(TAG_CONSOLE, "${it.message()} -- from line ${it.lineNumber()} of ${it.sourceId()}")
                     }
                     return true
+                }
+
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    if (request != null) {
+                        val resources = request.resources
+                        for (res in resources) {
+                            if (res == PermissionRequest.RESOURCE_AUDIO_CAPTURE) {
+                                request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                                Log.d(TAG_NATIVE, "Granted webview microphone permission to the web application.")
+                                return
+                            }
+                        }
+                    }
+                    super.onPermissionRequest(request)
                 }
             }
 
@@ -124,9 +229,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Regular class for JS Interface to communicate back and forth (prevents activity memory leaks by saving applicationContext)
-    class WebAppInterface(context: Context) {
-        private val appContext: Context = context.applicationContext
+    class WebAppInterface(private val activityContext: Context) {
+        private val appContext: Context = activityContext.applicationContext
         private var currentRingtone: android.media.Ringtone? = null
+
+        @JavascriptInterface
+        fun speak(text: String, lang: String, rate: Double, tone: String) {
+            (activityContext as? MainActivity)?.runOnUiThread {
+                (activityContext as? MainActivity)?.speak(text, lang, rate.toFloat(), tone)
+            }
+        }
+
+        @JavascriptInterface
+        fun stopSpeaking() {
+            (activityContext as? MainActivity)?.runOnUiThread {
+                (activityContext as? MainActivity)?.stopSpeaking()
+            }
+        }
 
         @JavascriptInterface
         fun vibrate(durationMillis: Long) {
@@ -146,6 +265,12 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun getDeviceSounds(): String {
+            val cached = (activityContext as? MainActivity)?.cachedSoundsJson
+            if (cached != null && cached != "[]") {
+                Log.d("MediVoceNative", "Returning cached device sounds instantly.")
+                return cached
+            }
+            // Fallback (should rarely occur, but is safe in case cache isn't fully loaded yet)
             val ringtonesList = org.json.JSONArray()
             try {
                 val rm = android.media.RingtoneManager(appContext)
@@ -162,7 +287,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MediVoceNative", "Error querying device sounds", e)
+                Log.e("MediVoceNative", "Error querying device sounds in fallback", e)
             }
             return ringtonesList.toString()
         }
@@ -219,6 +344,18 @@ class MainActivity : AppCompatActivity() {
             val prefs = appContext.getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
             prefs.edit().putString("active_alarms", alarmsJson).apply()
             Log.d(TAG_NATIVE, "Saved alarms to native storage: $alarmsJson")
+        }
+
+        @JavascriptInterface
+        fun savePreferencesToNative(lang: String, voiceEnabled: Boolean, speed: Double, tone: String) {
+            val prefs = appContext.getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putString("lang", lang)
+                .putBoolean("voiceEnabled", voiceEnabled)
+                .putFloat("speed", speed.toFloat())
+                .putString("tone", tone)
+                .apply()
+            Log.d(TAG_NATIVE, "Saved preferences to native storage: lang=$lang, voiceEnabled=$voiceEnabled, speed=$speed, tone=$tone")
         }
     }
 }

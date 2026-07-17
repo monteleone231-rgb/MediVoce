@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- SCHEDULE_EXACT_ALARM (Android 12/13+): Required for exact scheduling. Checked at runtime. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />

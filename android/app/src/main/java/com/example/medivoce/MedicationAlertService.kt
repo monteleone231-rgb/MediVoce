@@ -1,26 +1,42 @@
 package com.example.medivoce
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
+import android.speech.tts.TextToSpeech
 import android.util.Log
+import java.util.Locale
 
 private const val TAG = "MedicationAlertService"
 
-class MedicationAlertService : Service() {
+class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
 
     private lateinit var notificationHelper: NotificationHelper
+    private var tts: TextToSpeech? = null
+    private var medicineName: String = DEFAULT_MEDICINE_NAME
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate: Initializing MedicationAlertService")
         notificationHelper = NotificationHelper(applicationContext)
+        try {
+            // Try com.google.android.tts first, then fallback to default
+            tts = TextToSpeech(applicationContext, this, "com.google.android.tts")
+        } catch (e: Exception) {
+            try {
+                tts = TextToSpeech(applicationContext, this)
+            } catch (e2: Exception) {
+                Log.e(TAG, "Error creating TextToSpeech", e2)
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val medicineName = intent?.getStringExtra(EXTRA_MEDICINE_NAME) ?: DEFAULT_MEDICINE_NAME
+        medicineName = intent?.getStringExtra(EXTRA_MEDICINE_NAME) ?: DEFAULT_MEDICINE_NAME
         val alarmId = intent?.getIntExtra(EXTRA_ALARM_ID, DEFAULT_ALARM_ID) ?: DEFAULT_ALARM_ID
 
         Log.i(TAG, "onStartCommand: Triggering critical notification for $medicineName ($alarmId)")
@@ -51,10 +67,62 @@ class MedicationAlertService : Service() {
         return START_STICKY
     }
 
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val prefs = getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+            val lang = prefs.getString("lang", "it") ?: "it"
+            val voiceEnabled = prefs.getBoolean("voiceEnabled", true)
+            val speed = prefs.getFloat("speed", 0.75f)
+            val tone = prefs.getString("tone", "empathetic") ?: "empathetic"
+
+            if (voiceEnabled) {
+                try {
+                    val locale = when {
+                        lang.lowercase().startsWith("it") -> Locale.ITALY
+                        lang.lowercase().startsWith("es") -> Locale("es", "ES")
+                        lang.lowercase().startsWith("fr") -> Locale.FRANCE
+                        else -> Locale.US
+                    }
+                    tts?.language = locale
+                    tts?.setSpeechRate(speed)
+                    tts?.setPitch(if (tone == "empathetic") 1.2f else 1.0f)
+
+                    val textToSpeak = when {
+                        lang.lowercase().startsWith("it") -> "Attenzione, è l'ora di assumere il farmaco: $medicineName"
+                        lang.lowercase().startsWith("es") -> "Atención, es hora de tomar el medicamento: $medicineName"
+                        lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure de prendre le médicament : $medicineName"
+                        else -> "Attention, it is time to take your medication: $medicineName"
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        val params = Bundle().apply {
+                            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
+                        }
+                        tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, "medivoce_alert_speech")
+                    } else {
+                        @Suppress("DEPRECATION")
+                        tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null)
+                    }
+                    Log.d(TAG, "Native alert speaking: $textToSpeak")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error speaking natively in service", e)
+                }
+            }
+        } else {
+            Log.e(TAG, "Failed to initialize TextToSpeech in Service")
+        }
+    }
+
     override fun onDestroy() {
         Log.d(TAG, "onDestroy: Shutting down alert service and cleaning up MediaPlayer resources")
         // Stop any playing sound loop when service is dismissed
         notificationHelper.stopAlarmSound()
+        try {
+            tts?.stop()
+            tts?.shutdown()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error shutting down TextToSpeech in Service", e)
+        }
         super.onDestroy()
     }
 

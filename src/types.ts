@@ -16,11 +16,16 @@ export interface Medication {
   notes: string;
   category: MedicationCategory;
   weeklySchedule: number[]; // 0 for Sunday, 1 for Monday, etc.
+  frequencyType?: 'weekly' | 'monthly';
+  monthlyDay?: number; // 1 to 31 representing day of the month
   isActive: boolean;
   history: { [dateStr: string]: boolean }; // e.g. "2026-06-10": true (taken) or "2026-06-10_08:30": true
-  audioTone: string; // 'tranquillo' | 'campana' | 'sirena' | 'standard'
+  audioTone: string; // 'preset_arpeggio' | 'preset_marimba' | 'preset_trillo'
   voicePrompt: string; // custom empathetic speech prompt
   nativeId?: number; // Unique 32-bit integer for Android AlarmManager
+  stockCurrent?: number; // Current stock count (optional)
+  stockMin?: number; // Threshold for low stock warning
+  pillColor?: string; // Custom color accent for high-fidelity styling
 }
 
 export interface DoctorNote {
