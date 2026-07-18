@@ -30,7 +30,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const nextStep = () => {
-    if (step < 4) {
+    if (step < 3) {
       const nextS = step + 1;
       setStep(nextS);
       speakCurrentStepInfo(lang, nextS);
@@ -208,30 +208,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   transition={{ duration: 0.3 }}
                   className="space-y-6 text-center"
                 >
-                  <div className="mx-auto w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center text-[#4F46E5] border border-indigo-100">
-                    <Music className="w-10 h-10" />
-                  </div>
-
-                  <div className="space-y-3">
-                    <h2 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-[#1E3A8A]">
-                      {t.stepScanTitle}
-                    </h2>
-                    <p className="text-sm text-[#475569] leading-relaxed font-medium">
-                      {t.stepScanDesc}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 3 && (
-                <motion.div
-                  key="step3"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-6 text-center"
-                >
                   <div className="mx-auto w-20 h-20 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB] border border-[#DBEAFE]">
                     <MapPin className="w-10 h-10" />
                   </div>
@@ -247,9 +223,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 </motion.div>
               )}
 
-              {step === 4 && (
+              {step === 3 && (
                 <motion.div
-                  key="step4"
+                  key="step3"
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
@@ -277,12 +253,48 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   </div>
 
                   <div className="space-y-3 max-h-[38vh] overflow-y-auto pr-1">
+                    {/* ATTENTION BANNER FOR OPPO, REALME, XIAOMI */}
+                    <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 shadow-sm space-y-2">
+                      <p className="text-[11px] sm:text-xs text-rose-800 font-bold leading-relaxed">
+                        {lang === 'it' ? (
+                          <>
+                            ⚠️ <strong className="font-black text-rose-950">IMPORTANTE (Oppo, Realme, Xiaomi):</strong> Se l'allarme vocale non compare o non suona a schermo spento, devi assolutamente impostare su <strong className="text-rose-900 font-black">"Consentito"</strong> l'opzione <strong className="text-rose-900 font-black">"Invia notifiche a schermo intero"</strong> e <strong className="text-rose-900 font-black">"Consenti notifiche"</strong> nelle impostazioni del telefono.
+                          </>
+                        ) : (
+                          <>
+                            ⚠️ <strong className="font-black text-rose-950">IMPORTANT (Oppo, Realme, Xiaomi):</strong> If the voice alarm doesn't pop up or ring when the screen is off, you must set <strong className="text-rose-900 font-black">"Send full screen notifications"</strong> and <strong className="text-rose-900 font-black">"Allow notifications"</strong> to <strong className="text-rose-900 font-black">"Allowed"</strong> in your phone settings.
+                          </>
+                        )}
+                      </p>
+                      {/* Direct button shortcut if running on native app */}
+                      {(window as any).Android && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              const android = (window as any).Android;
+                              if (android && typeof android.openFullScreenIntentSettings === 'function') {
+                                android.openFullScreenIntentSettings();
+                              } else if (android && typeof android.openNotificationSettings === 'function') {
+                                android.openNotificationSettings();
+                              }
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }}
+                          className="w-full py-1.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-[11px] text-center shadow transition-all flex items-center justify-center gap-1.5"
+                        >
+                          ⚙️ {lang === 'it' ? 'Apri Impostazioni Notifiche a Schermo Intero' : 'Open Full Screen Notification Settings'}
+                        </button>
+                      )}
+                    </div>
+
                     {/* Item 1 */}
                     <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 shrink-0 border border-blue-100 text-xs font-extrabold">
                         1
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 flex-1">
                         <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
                           <Bell className="w-4 h-4 text-blue-500 shrink-0" />
                           {lang === 'it' ? 'Sveglie Precise (Alarms & Reminders)' : 'Precise Alarms & Reminders'}
@@ -298,15 +310,33 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                             </>
                           )}
                         </p>
+                        {(window as any).Android && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const android = (window as any).Android;
+                                if (android && typeof android.openExactAlarmSettings === 'function') {
+                                  android.openExactAlarmSettings();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[10px] font-bold shadow-sm transition-all"
+                          >
+                            ⚙️ {lang === 'it' ? 'Apri Sveglie Precise' : 'Open Precise Alarms'}
+                          </button>
+                        )}
                       </div>
                     </div>
-
+ 
                     {/* Item 2 */}
                     <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
                       <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 shrink-0 border border-amber-100 text-xs font-extrabold">
                         2
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 flex-1">
                         <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
                           <Battery className="w-4 h-4 text-amber-500 shrink-0" />
                           {lang === 'it' ? 'Escludi dall\'Ottimizzazione Batteria' : 'Disable Battery Optimization'}
@@ -322,15 +352,33 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                             </>
                           )}
                         </p>
+                        {(window as any).Android && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const android = (window as any).Android;
+                                if (android && typeof android.openBatteryOptimizationSettings === 'function') {
+                                  android.openBatteryOptimizationSettings();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-[10px] font-bold shadow-sm transition-all"
+                          >
+                            ⚙️ {lang === 'it' ? 'Apri Impostazioni Batteria' : 'Open Battery Settings'}
+                          </button>
+                        )}
                       </div>
                     </div>
-
+ 
                     {/* Item 3 */}
                     <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
                       <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 shrink-0 border border-purple-100 text-xs font-extrabold">
                         3
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 flex-1">
                         <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
                           <Eye className="w-4 h-4 text-purple-500 shrink-0" />
                           {lang === 'it' ? 'Mostra sopra altre app / Schermata di Blocco' : 'Display Over Other Apps / Lock Screen'}
@@ -346,15 +394,33 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                             </>
                           )}
                         </p>
+                        {(window as any).Android && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const android = (window as any).Android;
+                                if (android && typeof android.openOverlaySettings === 'function') {
+                                  android.openOverlaySettings();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-[10px] font-bold shadow-sm transition-all"
+                          >
+                            ⚙️ {lang === 'it' ? 'Apri Mostra Sopra Altre App' : 'Open Draw Over Other Apps'}
+                          </button>
+                        )}
                       </div>
                     </div>
-
+ 
                     {/* Item 4 */}
                     <div className="p-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex gap-3">
                       <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 shrink-0 border border-emerald-100 text-xs font-extrabold">
                         4
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 flex-1">
                         <h3 className="font-extrabold text-xs sm:text-sm text-[#1E293B] flex items-center gap-1.5">
                           <Check className="w-4 h-4 text-emerald-500 shrink-0" />
                           {lang === 'it' ? 'Consenti Notifiche' : 'Allow Notifications'}
@@ -370,6 +436,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                             </>
                           )}
                         </p>
+                        {(window as any).Android && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const android = (window as any).Android;
+                                if (android && typeof android.openNotificationSettings === 'function') {
+                                  android.openNotificationSettings();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[10px] font-bold shadow-sm transition-all"
+                          >
+                            ⚙️ {lang === 'it' ? 'Apri Impostazioni Notifiche' : 'Open Notification Settings'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -387,7 +471,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             {/* Progress Dots */}
             {step >= 0 && (
               <div className="flex justify-center gap-2">
-                {[0, 1, 2, 3, 4].map((idx) => (
+                {[0, 1, 2, 3].map((idx) => (
                   <div
                     key={idx}
                     className={`h-2 rounded-full transition-all duration-300 ${
@@ -425,7 +509,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   onClick={nextStep}
                   className={`${step > 0 ? 'w-2/3' : 'w-full'} py-3.5 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-black flex items-center justify-center gap-2 shadow-md transition-all text-base sm:text-lg`}
                 >
-                  <span>{step === 4 ? t.buttonFinish : t.buttonNext}</span>
+                  <span>{step === 3 ? t.buttonFinish : t.buttonNext}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               )}

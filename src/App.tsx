@@ -1895,25 +1895,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* NOTIFICATIONS MOBILE PREFERENCES */}
-                <div className="mb-6 text-left">
-                  <h3 className={`text-xl font-extrabold mb-2 ${appTheme === 'dark' ? 'text-white' : 'text-[#1E3A8A]'}`}>{t.ringtoneLabel}</h3>
 
-
-
-                  
-                  {/* DEVICE SOUNDS IMPORT BUTTON */}
-                  <button
-                    id="import-device-sounds-btn"
-                    onClick={() => {
-                      setShowImportSoundsModal(true);
-                    }}
-                    className="w-full py-4 px-5 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-[#1E293B] font-extrabold text-sm rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-450 active:border-slate-500 shadow-sm transition-all flex justify-center items-center gap-2.5 mt-3 active:scale-[0.97] cursor-pointer"
-                  >
-                    <Volume2 className="w-5 h-5 text-slate-500 shrink-0" />
-                    <span>{lang === 'it' ? "Importa Suoni Dispositivo (Nativo)" : "Import Device Sounds (Native)"}</span>
-                  </button>
-                </div>
 
                 {/* VISUAL & DEVICE PREFERENCES */}
                 <div className="mb-6 text-left space-y-4">

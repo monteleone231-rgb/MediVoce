@@ -307,6 +307,112 @@ class MainActivity : BridgeActivity(), TextToSpeech.OnInitListener {
         }
 
         @JavascriptInterface
+        fun openAppSettings() {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = android.net.Uri.parse("package:" + context.packageName)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                Log.d("MediVoceNative", "Opened app settings.")
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error opening app settings", e)
+            }
+        }
+
+        @JavascriptInterface
+        fun openNotificationSettings() {
+            try {
+                val intent = android.content.Intent()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    intent.action = android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                    intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                } else {
+                    intent.action = "android.settings.APP_NOTIFICATION_SETTINGS"
+                    intent.putExtra("app_package", context.packageName)
+                    intent.putExtra("app_uid", context.applicationInfo.uid)
+                }
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                Log.d("MediVoceNative", "Opened notification settings.")
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error opening notification settings", e)
+                openAppSettings()
+            }
+        }
+
+        @JavascriptInterface
+        fun openExactAlarmSettings() {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    intent.data = android.net.Uri.parse("package:" + context.packageName)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    Log.d("MediVoceNative", "Opened exact alarm settings.")
+                } else {
+                    openAppSettings()
+                }
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error opening exact alarm settings", e)
+                openAppSettings()
+            }
+        }
+
+        @JavascriptInterface
+        fun openBatteryOptimizationSettings() {
+            try {
+                val intent = android.content.Intent()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    intent.action = android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
+                } else {
+                    intent.action = android.provider.Settings.ACTION_SETTINGS
+                }
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                Log.d("MediVoceNative", "Opened battery optimization settings.")
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error opening battery settings", e)
+                openAppSettings()
+            }
+        }
+
+        @JavascriptInterface
+        fun openOverlaySettings() {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    intent.data = android.net.Uri.parse("package:" + context.packageName)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    Log.d("MediVoceNative", "Opened overlay settings.")
+                } else {
+                    openAppSettings()
+                }
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error opening overlay settings", e)
+                openAppSettings()
+            }
+        }
+
+        @JavascriptInterface
+        fun openFullScreenIntentSettings() {
+            try {
+                if (Build.VERSION.SDK_INT >= 34) { // Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+                    val intent = android.content.Intent("android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT")
+                    intent.data = android.net.Uri.parse("package:" + context.packageName)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    Log.d("MediVoceNative", "Opened full screen intent settings (Android 14+).")
+                } else {
+                    openNotificationSettings()
+                }
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error opening full screen intent settings", e)
+                openNotificationSettings()
+            }
+        }
+
+        @JavascriptInterface
         fun speak(text: String, lang: String, rate: Double, tone: String) {
             activity.runOnUiThread {
                 (activity as? MainActivity)?.speak(text, lang, rate.toFloat(), tone)
