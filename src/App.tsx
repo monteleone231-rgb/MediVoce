@@ -2118,8 +2118,8 @@ export default function App() {
                   </div>
                   <button
                     onClick={() => {
-                      // Placeholder for actual payment integration
-                      window.open('https://www.buymeacoffee.com', '_blank');
+                      // Open developer's Buy Me a Coffee page
+                      window.open('https://www.buymeacoffee.com/monteleoneq', '_blank');
                     }}
                     className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
                   >
