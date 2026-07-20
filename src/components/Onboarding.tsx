@@ -116,7 +116,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
                     <label className="block text-xs font-bold tracking-wider text-[#64748B] uppercase">{t.selectLanguage}</label>
                     <div className="grid grid-cols-2 gap-3">
-                      {(['it', 'en', 'es', 'fr'] as LanguageCode[]).map((l) => (
+                      {(['it', 'en', 'es', 'fr', 'de'] as LanguageCode[]).map((l) => (
                         <button
                           id={`lang-btn-${l}`}
                           key={l}
@@ -131,6 +131,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                           {l === 'en' && '🇺🇸 English'}
                           {l === 'es' && '🇪🇸 Español'}
                           {l === 'fr' && '🇫🇷 Français'}
+                          {l === 'de' && '🇩🇪 Deutsch'}
                         </button>
                       ))}
                     </div>

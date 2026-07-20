@@ -11,7 +11,7 @@ import {
   AlertTriangle, Mic, Clock, Camera, Calendar, 
   Smartphone, Bell, Sparkles, Phone, FileText, ChevronRight, ChevronDown, Coffee, Search
 } from 'lucide-react';
-import { IT, US, ES, FR } from 'country-flag-icons/react/3x2';
+import { IT, US, ES, FR, DE } from 'country-flag-icons/react/3x2';
 
 import { LanguageCode, Medication, MedicationCategory, DoctorNote, TRANSLATIONS } from './types';
 import { playAlarmTone, speakAnnouncement, stopSpeaking, BARCODE_MOCK_DATABASE, getLocalIsoDate, isScheduledOnDate } from './utils';
@@ -1196,7 +1196,13 @@ export default function App() {
       <div 
         key={med.id} 
         className={`p-4 rounded-3xl border bg-white border-gray-200 shadow-sm text-left flex flex-col gap-3 transition-all ${
-          !med.isActive ? 'opacity-70 bg-slate-50' : ''
+          !med.isActive ? 'opacity-70 bg-slate-50' : `border-l-4 ${
+            med.pillColor === 'red' ? 'border-l-rose-500' :
+            med.pillColor === 'green' ? 'border-l-emerald-500' :
+            med.pillColor === 'orange' ? 'border-l-amber-500' :
+            med.pillColor === 'purple' ? 'border-l-purple-500' :
+            'border-l-blue-500'
+          }`
         }`}
       >
         <div className="flex justify-between items-start gap-2">
@@ -1515,7 +1521,13 @@ export default function App() {
                            className={`p-4 rounded-3xl border transition-all space-y-3 relative text-left ${
                              isTaken 
                                ? 'bg-emerald-50/45 border-[#A7F3D0] shadow-sm' 
-                               : 'bg-white border-gray-200 hover:border-gray-300'
+                               : `bg-white border-gray-200 hover:border-gray-300 border-l-4 ${
+                                   med.pillColor === 'red' ? 'border-l-rose-500' :
+                                   med.pillColor === 'green' ? 'border-l-emerald-500' :
+                                   med.pillColor === 'orange' ? 'border-l-amber-500' :
+                                   med.pillColor === 'purple' ? 'border-l-purple-500' :
+                                   'border-l-blue-500'
+                                 }`
                            }`}
                          >
                            <div className="flex justify-between items-start gap-3">
@@ -1524,7 +1536,11 @@ export default function App() {
                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 ${
                                  isTaken 
                                    ? 'bg-emerald-100 text-emerald-800' 
-                                   : `${theme.bgLight} ${theme.text}`
+                                   : med.pillColor === 'red' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                     med.pillColor === 'green' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                     med.pillColor === 'orange' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                     med.pillColor === 'purple' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                                     'bg-blue-50 text-blue-600 border border-blue-100'
                                }`}>
                                  {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
                                </div>
@@ -1534,7 +1550,15 @@ export default function App() {
                                  </h4>
                                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                   <span className={`font-bold ${theme.text}`}>{timeSlot}</span>
+                                   <span className={`font-bold ${
+                                     isTaken 
+                                       ? 'text-emerald-600' 
+                                       : med.pillColor === 'red' ? 'text-rose-600' :
+                                         med.pillColor === 'green' ? 'text-emerald-600' :
+                                         med.pillColor === 'orange' ? 'text-amber-600' :
+                                         med.pillColor === 'purple' ? 'text-purple-600' :
+                                         'text-blue-600'
+                                   }`}>{timeSlot}</span>
                                    <span>&bull;</span>
                                    <span className="font-semibold text-gray-500">{med.dosage}</span>
                                  </div>
@@ -1731,6 +1755,7 @@ export default function App() {
                            {lang === 'en' && <><div className="w-6 shrink-0"><US /></div><span className="font-extrabold text-[#1E293B]">English</span></>}
                            {lang === 'es' && <><div className="w-6 shrink-0"><ES /></div><span className="font-extrabold text-[#1E293B]">Español</span></>}
                            {lang === 'fr' && <><div className="w-6 shrink-0"><FR /></div><span className="font-extrabold text-[#1E293B]">Français</span></>}
+                           {lang === 'de' && <><div className="w-6 shrink-0"><DE /></div><span className="font-extrabold text-[#1E293B]">Deutsch</span></>}
                         </div>
                         <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
                       </button>
@@ -1743,7 +1768,7 @@ export default function App() {
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-[#E2E8F0] rounded-xl shadow-lg z-50 overflow-hidden"
                           >
-                            {(['it', 'en', 'es', 'fr'] as LanguageCode[]).map((ln) => (
+                            {(['it', 'en', 'es', 'fr', 'de'] as LanguageCode[]).map((ln) => (
                               <button
                                 key={ln}
                                 onClick={() => {
@@ -1759,6 +1784,7 @@ export default function App() {
                                 {ln === 'en' && <><div className="w-6 shrink-0"><US /></div><span className="font-bold text-slate-700">English</span></>}
                                 {ln === 'es' && <><div className="w-6 shrink-0"><ES /></div><span className="font-bold text-slate-700">Español</span></>}
                                 {ln === 'fr' && <><div className="w-6 shrink-0"><FR /></div><span className="font-bold text-slate-700">Français</span></>}
+                                {ln === 'de' && <><div className="w-6 shrink-0"><DE /></div><span className="font-bold text-slate-700">Deutsch</span></>}
                                 {lang === ln && <CheckCircle className={`w-5 h-5 ${theme.text} ml-auto`} />}
                               </button>
                             ))}
