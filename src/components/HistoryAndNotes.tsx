@@ -272,31 +272,48 @@ Sent via MediVoce app.`;
             {weekdays.map(d => <div key={d.label}>{d.label.substring(0,2)}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
-            {/* Generating a simple pseudo-calendar for the current month */}
-            {Array.from({ length: 35 }).map((_, i) => {
-              const dateVal = i - 2; // Offset for visually starting somewhere
-              if (dateVal <= 0 || dateVal > 31) return <div key={i} className="p-2"></div>;
-              
-              // Mock random adherence past dates for visual monthly calendar
-              const isPast = dateVal <= new Date().getDate();
-              const isToday = dateVal === new Date().getDate();
-              let bg = "bg-white border-[#E2E8F0]";
-              let text = "text-[#475569]";
-              
-              if (isToday) {
-                 bg = "bg-[#2563EB] border-[#2563EB]";
-                 text = "text-white font-bold";
-              } else if (isPast) {
-                 // Simplistic mock to show it's taken
-                 bg = "bg-emerald-50 border-emerald-100 text-emerald-800";
-              }
+            {/* Generating dynamic monthly calendar for the current month */}
+            {(() => {
+              const today = new Date();
+              const year = today.getFullYear();
+              const month = today.getMonth();
+              const todayDate = today.getDate();
 
-              return (
-                <div key={i} className={`flex items-center justify-center p-1.5 rounded-lg border text-3xs ${bg} ${text}`}>
-                  {dateVal}
-                </div>
-              );
-            })}
+              // First day of current month
+              const firstDayOfMonth = new Date(year, month, 1);
+              // JS getDay(): 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
+              // Map to Monday-start index: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+              const firstDayOffset = (firstDayOfMonth.getDay() + 6) % 7;
+
+              // Number of days in current month
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+              // Total slots needed in 7-column grid
+              const totalGridSlots = Math.ceil((firstDayOffset + daysInMonth) / 7) * 7;
+
+              return Array.from({ length: totalGridSlots }).map((_, i) => {
+                const dateVal = i - firstDayOffset + 1;
+                if (dateVal <= 0 || dateVal > daysInMonth) return <div key={i} className="p-2"></div>;
+
+                const isPast = dateVal < todayDate;
+                const isToday = dateVal === todayDate;
+                let bg = "bg-white border-[#E2E8F0]";
+                let text = "text-[#475569]";
+
+                if (isToday) {
+                  bg = "bg-[#2563EB] border-[#2563EB]";
+                  text = "text-white font-bold";
+                } else if (isPast) {
+                  bg = "bg-emerald-50 border-emerald-100 text-emerald-800";
+                }
+
+                return (
+                  <div key={i} className={`flex items-center justify-center p-1.5 rounded-lg border text-3xs ${bg} ${text}`}>
+                    {dateVal}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
 

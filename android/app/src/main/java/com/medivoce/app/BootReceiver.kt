@@ -1,4 +1,4 @@
-package com.example.medivoce
+package com.medivoce.app
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -10,14 +10,14 @@ import java.util.Calendar
 
 private const val TAG = "BootReceiver"
 
-/**
- * Boot Receiver to re-schedule all alarms when the user's phone restarts.
- * Essential because standard Android alarms are wiped from the device's volatile memory upon shutdown.
- */
 class BootReceiver : BroadcastReceiver() {
+    private val bootActions = setOf(
+        Intent.ACTION_BOOT_COMPLETED,
+        "android.intent.action.QUICKBOOT_POWERON"
+    )
 
-    override fun onReceive(context: Context, intent: Intent?) {
-        val action = intent?.action
+    override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action
         Log.d(TAG, "onReceive: Boot event detected with action=$action")
 
         if (action in bootActions) {
@@ -55,7 +55,6 @@ class BootReceiver : BroadcastReceiver() {
                 val hours = timeParts[0].toIntOrNull() ?: continue
                 val minutes = timeParts[1].toIntOrNull() ?: continue
 
-                // Calculate next timeMillis
                 val calendar = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, hours)
                     set(Calendar.MINUTE, minutes)
@@ -75,13 +74,4 @@ class BootReceiver : BroadcastReceiver() {
             Log.e(TAG, "Error parsing active alarms JSON", e)
         }
     }
-
-    companion object {
-        private val bootActions = setOf(
-            Intent.ACTION_BOOT_COMPLETED,
-            "android.intent.action.QUICKBOOT_POWERON", // HTC / older devices quick boot
-            "com.htc.intent.action.QUICKBOOT_POWERON"
-        )
-    }
 }
-

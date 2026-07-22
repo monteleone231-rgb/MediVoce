@@ -1,4 +1,4 @@
-package com.example.medivoceapp
+package com.medivoce.app
 
 import android.content.Context
 import android.media.Ringtone

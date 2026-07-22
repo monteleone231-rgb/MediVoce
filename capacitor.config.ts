@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.medivoceapp',
+  appId: 'com.medivoce.app',
   appName: 'MediVoce Assistant',
   webDir: 'dist'
 };

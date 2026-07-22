@@ -1,4 +1,4 @@
-package com.example.medivoceapp
+package com.medivoce.app
 
 import android.app.Notification
 import android.app.NotificationChannel
