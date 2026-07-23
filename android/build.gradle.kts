@@ -1,7 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 extra.apply {
-    set("compileSdkVersion", 35)
-    set("targetSdkVersion", 35)
+    set("compileSdkVersion", 36)
+    set("targetSdkVersion", 36)
     set("minSdkVersion", 26)
     set("androidxActivityVersion", "1.9.0")
     set("androidxAppCompatVersion", "1.6.1")
