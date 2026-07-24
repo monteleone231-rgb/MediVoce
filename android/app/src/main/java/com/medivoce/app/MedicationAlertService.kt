@@ -100,6 +100,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                         lang.lowercase().startsWith("it") -> Locale.ITALY
                         lang.lowercase().startsWith("es") -> Locale("es", "ES")
                         lang.lowercase().startsWith("fr") -> Locale.FRANCE
+                        lang.lowercase().startsWith("de") -> Locale.GERMANY
                         else -> Locale.US
                     }
                     tts?.language = locale
@@ -110,6 +111,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                         lang.lowercase().startsWith("it") -> "Attenzione, è l'ora di assumere il farmaco: $medName"
                         lang.lowercase().startsWith("es") -> "Atención, es hora de tomar el medicamento: $medName"
                         lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure de prendre le médicament : $medName"
+                        lang.lowercase().startsWith("de") -> "Achtung, es ist Zeit für Ihre Medizin: $medName"
                         else -> "Attention, it is time to take your medication: $medName"
                     }
 

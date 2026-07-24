@@ -120,6 +120,44 @@ export const TRANSLATIONS: Record<LanguageCode, {
   privacyPolicy: string;
   privacyText: string;
   medicalDisclaimer: string;
+  devicePreferences: string;
+  listenTutorialBtn: string;
+  voiceTutorialText: string;
+  toneEmpatheticActive: string;
+  toneFirmActive: string;
+  supportDevTitle: string;
+  supportDevText: string;
+  donateBtn: string;
+  historyAndNotesHeader: string;
+  historyAndNotesSub: string;
+  monthlyDosageCalendar: string;
+  howDoYouFeel: string;
+  wellbeingSubtitle: string;
+  shareReportTitle: string;
+  shareReportSub: string;
+  reportCopied: string;
+  copyDailyReport: string;
+  detailsFor: string;
+  noMedsForDay: string;
+  emergencyTitle: string;
+  emergencySub: string;
+  callNow: string;
+  noNotesYet: string;
+  perfectAdherenceMsg: string;
+  monthlyStatsSub: string;
+  takenStatus: string;
+  pendingStatus: string;
+  activeMedsLabel: string;
+  inactiveMedsLabel: string;
+  noActiveMeds: string;
+  noInactiveMeds: string;
+  searchMedPlaceholder: string;
+  medicationManagementHeader: string;
+  medicationManagementSub: string;
+  tabToday: string;
+  tabMeds: string;
+  tabPharmacies: string;
+  tabSetup: string;
 }> = {
   it: {
     appName: "MediVoce",
@@ -206,6 +244,44 @@ export const TRANSLATIONS: Record<LanguageCode, {
     privacyPolicy: "Informativa sulla Privacy",
     privacyText: "Privacy Policy Lineare: L'app opera esclusivamente in modalità locale, non ha database remoti e non traccia in alcun modo le abitudini dell'utente.",
     medicalDisclaimer: "Attenzione: Quest'app è solo un promemoria e non sostituisce in alcun modo il parere, la diagnosi o il consiglio del proprio medico curante o del farmacista.",
+    devicePreferences: "Preferenze Dispositivo",
+    listenTutorialBtn: "Ascolta Tutorial Vocale",
+    voiceTutorialText: "Benvenuto nel tutorial. Quando senti l'avviso della medicina, puoi dire 'Sì' o 'Preso' per confermare l'assunzione. Oppure puoi toccare il pulsante rosso sullo schermo per rimandare l'allarme di qualche minuto.",
+    toneEmpatheticActive: "Tono empatico attivato",
+    toneFirmActive: "Tono deciso attivato",
+    supportDevTitle: "Supporta lo Sviluppatore",
+    supportDevText: "Se trovi utile questa app e vuoi aiutarmi a mantenerla gratuita e senza pubblicità, puoi offrirmi un caffè!",
+    donateBtn: "Dona 1,99€",
+    historyAndNotesHeader: "Cronologia & Note",
+    historyAndNotesSub: "Aderenza settimanale e diario sintomi",
+    monthlyDosageCalendar: "Calendario Dosi Mensile",
+    howDoYouFeel: "Come ti senti oggi?",
+    wellbeingSubtitle: "Stato di salute e condivisione",
+    shareReportTitle: "Invia Report al Caregiver",
+    shareReportSub: "Crea un report di oggi con medicinali presi, sintomi e livello di benessere pronto da inviare su WhatsApp o SMS.",
+    reportCopied: "Report Copiato!",
+    copyDailyReport: "Copia Report Giornaliero",
+    detailsFor: "Dettaglio di ",
+    noMedsForDay: "Nessuna medicina programmata per questo giorno.",
+    emergencyTitle: "Emergenza",
+    emergencySub: "Imposta il numero per chiamare un parente o il soccorso in caso di emergenza.",
+    callNow: "Chiama Ora",
+    noNotesYet: "Ancora nessun appunto inserito nel registro.",
+    perfectAdherenceMsg: "Aderenza perfetta o dati in calcolo per il mese.",
+    monthlyStatsSub: "Questi dati includono il calcolo mensile basato sull'attività recente.",
+    takenStatus: "Presa",
+    pendingStatus: "Salto",
+    activeMedsLabel: "Attivi",
+    inactiveMedsLabel: "Disattivati",
+    noActiveMeds: "Nessun farmaco attivo.",
+    noInactiveMeds: "Nessun farmaco disattivato.",
+    searchMedPlaceholder: "Cerca farmaco...",
+    medicationManagementHeader: "Gestione Farmaci",
+    medicationManagementSub: "Attiva/disattiva e organizza",
+    tabToday: "Oggi",
+    tabMeds: "Farmaci",
+    tabPharmacies: "Farmacie",
+    tabSetup: "Setup",
   },
   en: {
     appName: "MediVoce",
@@ -292,6 +368,44 @@ export const TRANSLATIONS: Record<LanguageCode, {
     privacyPolicy: "Privacy Policy",
     privacyText: "Linear Privacy Policy: The app operates entirely locally, has no remote databases, and does not track user habits in any way.",
     medicalDisclaimer: "Warning: This app is solely a reminder tool and does not substitute medical or pharmacological advice, diagnosis, or recommendations.",
+    devicePreferences: "Device Preferences",
+    listenTutorialBtn: "Listen to Voice Tutorial",
+    voiceTutorialText: "Welcome to the tutorial. When you hear the medicine alert, say 'Yes' or 'Taken' to confirm. Or, you can tap the red button on the screen to snooze the alarm for a few minutes.",
+    toneEmpatheticActive: "Empathetic tone active",
+    toneFirmActive: "Firm tone active",
+    supportDevTitle: "Support the Developer",
+    supportDevText: "If you find this app helpful and want to help me keep it free and without ads, consider buying me a coffee!",
+    donateBtn: "Donate €1.99",
+    historyAndNotesHeader: "Adherence & Notes",
+    historyAndNotesSub: "Weekly adherence and symptom journal",
+    monthlyDosageCalendar: "Monthly Dosage Calendar",
+    howDoYouFeel: "How do you feel today?",
+    wellbeingSubtitle: "Well-being & caregiver report",
+    shareReportTitle: "Share Report with Caregiver",
+    shareReportSub: "Creates a summary of today's medications, symptoms, and well-being ready to send via WhatsApp or SMS.",
+    reportCopied: "Report Copied!",
+    copyDailyReport: "Copy Daily Report",
+    detailsFor: "Details for ",
+    noMedsForDay: "No medications scheduled for this day.",
+    emergencyTitle: "Emergency",
+    emergencySub: "Set the number to reach a relative or emergency services in an emergency.",
+    callNow: "Call Now",
+    noNotesYet: "No notes recorded yet.",
+    perfectAdherenceMsg: "Perfect adherence or calculating monthly data.",
+    monthlyStatsSub: "Monthly statistics are calculated from recent activity.",
+    takenStatus: "Taken",
+    pendingStatus: "Pending",
+    activeMedsLabel: "Active",
+    inactiveMedsLabel: "Inactive",
+    noActiveMeds: "No active medications.",
+    noInactiveMeds: "No inactive medications.",
+    searchMedPlaceholder: "Search medication...",
+    medicationManagementHeader: "Medication Management",
+    medicationManagementSub: "Toggle and organize",
+    tabToday: "Today",
+    tabMeds: "Meds",
+    tabPharmacies: "Pharmacies",
+    tabSetup: "Setup",
   },
   es: {
     appName: "MediVoce",
@@ -378,6 +492,44 @@ export const TRANSLATIONS: Record<LanguageCode, {
     privacyPolicy: "Política de Privacidad",
     privacyText: "Política de Privacidad Lineal: La aplicación funciona exclusivamente en modo local, no tiene bases de datos remotas y no rastrea los hábitos del usuario.",
     medicalDisclaimer: "Advertencia: Esta aplicación es solo un recordatorio y no sustituye de ninguna manera el consejo, diagnóstico o recomendación de un médico o farmacéutico.",
+    devicePreferences: "Preferencias del Dispositivo",
+    listenTutorialBtn: "Escuchar Tutorial de Voz",
+    voiceTutorialText: "Bienvenido al tutorial. Cuando escuche la alerta de la medicina, diga 'Sí' o 'Tomado' para confirmar. O bien, toque el botón rojo en la pantalla para posponer la alarma unos minutos.",
+    toneEmpatheticActive: "Tono empático activado",
+    toneFirmActive: "Tono firme activado",
+    supportDevTitle: "Apoyar al Desarrollador",
+    supportDevText: "Si encuentra útil esta aplicación y desea ayudarme a mantenerla gratuita y sin publicidad, ¡considere invitarme a un café!",
+    donateBtn: "Donar 1,99 €",
+    historyAndNotesHeader: "Historial y Notas",
+    historyAndNotesSub: "Adherencia semanal y diario de síntomas",
+    monthlyDosageCalendar: "Calendario Mensual de Dosis",
+    howDoYouFeel: "¿Cómo te sientes hoy?",
+    wellbeingSubtitle: "Estado de salud e informe para el cuidador",
+    shareReportTitle: "Enviar Informe al Cuidador",
+    shareReportSub: "Crea un informe de hoy con los medicamentos tomados, síntomas y nivel de bienestar listo para enviar por WhatsApp o SMS.",
+    reportCopied: "¡Informe Copiado!",
+    copyDailyReport: "Copiar Informe Diario",
+    detailsFor: "Detalle de ",
+    noMedsForDay: "No hay medicamentos programados para este día.",
+    emergencyTitle: "Emergencia",
+    emergencySub: "Configure el número para llamar a un familiar o a urgencias en caso de emergencia.",
+    callNow: "Llamar Ahora",
+    noNotesYet: "Aún no hay notas registradas.",
+    perfectAdherenceMsg: "Adherencia perfecta o calculando datos del mes.",
+    monthlyStatsSub: "Estos datos incluyen el cálculo mensual basado en la actividad reciente.",
+    takenStatus: "Tomada",
+    pendingStatus: "Pendiente",
+    activeMedsLabel: "Activos",
+    inactiveMedsLabel: "Desactivados",
+    noActiveMeds: "No hay medicamentos activos.",
+    noInactiveMeds: "No hay medicamentos desactivados.",
+    searchMedPlaceholder: "Buscar medicamento...",
+    medicationManagementHeader: "Gestión de Medicamentos",
+    medicationManagementSub: "Activar/desactivar y organizar",
+    tabToday: "Hoy",
+    tabMeds: "Fármacos",
+    tabPharmacies: "Farmacias",
+    tabSetup: "Ajustes",
   },
   fr: {
     appName: "MediVoce",
@@ -464,6 +616,44 @@ export const TRANSLATIONS: Record<LanguageCode, {
     privacyPolicy: "Politique de Confidentialité",
     privacyText: "Politique de Confidentialité Linéaire : L'application fonctionne exclusivement en mode local, n'a pas de bases de données distantes et ne suit pas les habitudes des utilisateurs.",
     medicalDisclaimer: "Avertissement : Cette application n'est qu'un simple rappel et ne remplace en aucun cas les conseils, diagnostics ou recommandations d'un médecin ou d'un pharmacien.",
+    devicePreferences: "Préférences de l'Appareil",
+    listenTutorialBtn: "Écouter le Tutoriel Vocal",
+    voiceTutorialText: "Bienvenue dans le tutoriel. Lorsque vous entendez l'alerte du médicament, dites 'Oui' ou 'Pris' pour confirmer la prise. Ou appuyez sur le bouton rouge à l'écran pour reporter l'alarme de quelques minutes.",
+    toneEmpatheticActive: "Tonalité empathique activée",
+    toneFirmActive: "Tonalité ferme activée",
+    supportDevTitle: "Soutenir le Développeur",
+    supportDevText: "Si vous trouvez cette application utile et souhaitez m'aider à la maintenir gratuite et sans publicité, vous pouvez m'offrir un café !",
+    donateBtn: "Faire un don de 1,99 €",
+    historyAndNotesHeader: "Historique & Notes",
+    historyAndNotesSub: "Observance hebdomadaire et journal des symptômes",
+    monthlyDosageCalendar: "Calendrier Mensuel des Doses",
+    howDoYouFeel: "Comment vous sentez-vous aujourd'hui ?",
+    wellbeingSubtitle: "État de santé et rapport pour l'aidant",
+    shareReportTitle: "Partager le Rapport avec l'Aidant",
+    shareReportSub: "Crée un rapport d'aujourd'hui avec les médicaments pris, les symptômes et le niveau de bien-être prêt à être envoyé par WhatsApp ou SMS.",
+    reportCopied: "Rapport Copié !",
+    copyDailyReport: "Copier le Rapport Journalier",
+    detailsFor: "Détails pour ",
+    noMedsForDay: "Aucun médicament programmé pour ce jour.",
+    emergencyTitle: "Urgence",
+    emergencySub: "Définissez le numéro pour appeler un proche ou les secours en cas d'urgence.",
+    callNow: "Appeler Maintenant",
+    noNotesYet: "Aucune note enregistrée pour l'instant.",
+    perfectAdherenceMsg: "Observance parfaite ou calcul des données mensuelles.",
+    monthlyStatsSub: "Ces données incluent le calcul mensuel basé sur l'activité récente.",
+    takenStatus: "Pris",
+    pendingStatus: "En attente",
+    activeMedsLabel: "Actifs",
+    inactiveMedsLabel: "Désactivés",
+    noActiveMeds: "Aucun médicament actif.",
+    noInactiveMeds: "Aucun médicament désactivé.",
+    searchMedPlaceholder: "Rechercher un médicament...",
+    medicationManagementHeader: "Gestion des Médicaments",
+    medicationManagementSub: "Activer/désactiver et organiser",
+    tabToday: "Aujourd'hui",
+    tabMeds: "Médicaments",
+    tabPharmacies: "Pharmacies",
+    tabSetup: "Réglages",
   },
   de: {
     appName: "MediVoce",
@@ -550,5 +740,43 @@ export const TRANSLATIONS: Record<LanguageCode, {
     privacyPolicy: "Datenschutzerklärung",
     privacyText: "Lineare Datenschutzerklärung: Die App läuft ausschließlich lokal, besitzt keine Online-Datenbanken und verfolgt die Gewohnheiten des Benutzers in keiner Weise.",
     medicalDisclaimer: "Warnung: Diese App dient ausschließlich als Erinnerungshilfe und ersetzt keinesfalls den Rat, die Diagnose oder die Empfehlung eines Arztes oder Apothekers.",
+    devicePreferences: "Geräteeinstellungen",
+    listenTutorialBtn: "Sprachanleitung anhören",
+    voiceTutorialText: "Willkommen beim Tutorial. Wenn Sie den Medikamentenalarm hören, sagen Sie 'Ja' oder 'Eingenommen', um die Einnahme zu bestätigen. Oder tippen Sie auf die rote Taste auf dem Bildschirm, um den Alarm um einige Minuten zu verschieben.",
+    toneEmpatheticActive: "Einfühlsamer Ton aktiviert",
+    toneFirmActive: "Bestimmter Ton aktiviert",
+    supportDevTitle: "Entwickler unterstützen",
+    supportDevText: "Wenn Sie diese App nützlich finden und mir helfen möchten, sie kostenlos und werbefrei zu halten, können Sie mir einen Kaffee ausgeben!",
+    donateBtn: "1,99 € spenden",
+    historyAndNotesHeader: "Verlauf & Notizen",
+    historyAndNotesSub: "Wöchentliche Einnahme und Symptomtagebuch",
+    monthlyDosageCalendar: "Monatlicher Dosiskalender",
+    howDoYouFeel: "Wie fühlen Sie sich heute?",
+    wellbeingSubtitle: "Wohlbefinden & Pflegebericht",
+    shareReportTitle: "Bericht an Pflegeperson senden",
+    shareReportSub: "Erstellt einen heutigen Bericht mit eingenommenen Medikamenten, Symptomen und Wohlbefinden zum Senden per WhatsApp oder SMS.",
+    reportCopied: "Bericht kopiert!",
+    copyDailyReport: "Tagesbericht kopieren",
+    detailsFor: "Details für ",
+    noMedsForDay: "Für diesen Tag sind keine Medikamente geplant.",
+    emergencyTitle: "Notfall",
+    emergencySub: "Legen Sie die Nummer fest, um im Notfall Angehörige oder den Rettungsdienst anzurufen.",
+    callNow: "Jetzt Anrufen",
+    noNotesYet: "Noch keine Notizen im Tagebuch.",
+    perfectAdherenceMsg: "Perfekte Einnahme oder Berechnung der Monatsdaten.",
+    monthlyStatsSub: "Diese Daten enthalten die monatliche Berechnung basierend auf der letzten Aktivität.",
+    takenStatus: "Eingenommen",
+    pendingStatus: "Offen",
+    activeMedsLabel: "Aktiv",
+    inactiveMedsLabel: "Inaktiv",
+    noActiveMeds: "Keine aktiven Medikamente.",
+    noInactiveMeds: "Keine inaktiven Medikamente.",
+    searchMedPlaceholder: "Medikament suchen...",
+    medicationManagementHeader: "Medikamentenverwaltung",
+    medicationManagementSub: "Aktivieren/deaktivieren und organisieren",
+    tabToday: "Heute",
+    tabMeds: "Medikamente",
+    tabPharmacies: "Apotheken",
+    tabSetup: "Einstellungen",
   }
 };

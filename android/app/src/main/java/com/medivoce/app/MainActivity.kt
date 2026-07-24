@@ -127,7 +127,13 @@ class MainActivity : BridgeActivity(), TextToSpeech.OnInitListener {
             return
         }
         try {
-            val locale = if (lang.lowercase().startsWith("it")) Locale.ITALIAN else Locale.ENGLISH
+            val locale = when {
+                lang.lowercase().startsWith("it") -> Locale.ITALIAN
+                lang.lowercase().startsWith("es") -> Locale("es", "ES")
+                lang.lowercase().startsWith("fr") -> Locale.FRENCH
+                lang.lowercase().startsWith("de") -> Locale.GERMAN
+                else -> Locale.ENGLISH
+            }
             tts?.language = locale
             tts?.setSpeechRate(rate)
             

@@ -1631,10 +1631,10 @@ export default function App() {
                 <div className="pt-6 border-t border-slate-200/80 space-y-5">
                   <div className="text-left pl-1">
                     <h3 className="text-lg font-extrabold text-[#1E3A8A] tracking-tight">
-                      {lang === 'it' ? "Cronologia & Note" : "Adherence & Notes"}
+                      {t.historyAndNotesHeader}
                     </h3>
                     <p className="text-3xs text-[#64748B] font-bold uppercase tracking-wider">
-                      {lang === 'it' ? "Aderenza settimanale e diario sintomi" : "Weekly compliance and symptom journal"}
+                      {t.historyAndNotesSub}
                     </p>
                   </div>
                   <HistoryAndNotes 
@@ -1656,10 +1656,10 @@ export default function App() {
                 <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-[#E2E8F0] shadow-sm">
                   <div className="text-left">
                     <h3 className="text-xl font-extrabold text-[#1E3A8A]">
-                      {lang === 'it' ? "Gestione Farmaci" : "Medication Management"}
+                      {t.medicationManagementHeader}
                     </h3>
                     <p className="text-3xs text-[#64748B] font-bold uppercase tracking-wider mt-0.5">
-                      {lang === 'it' ? "Attiva/disattiva e organizza" : "Toggle and organize"}
+                      {t.medicationManagementSub}
                     </p>
                   </div>
                   <button
@@ -1689,7 +1689,7 @@ export default function App() {
                   <input
                     type="text"
                     value={medsSearchQuery}
-                    placeholder={lang === 'it' ? "Cerca farmaco..." : "Search medication..."}
+                    placeholder={t.searchMedPlaceholder}
                     className="w-full bg-white border border-[#E2E8F0] rounded-2xl px-4 py-3 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                     onChange={(e) => setMedsSearchQuery(e.target.value)}
                   />
@@ -1699,11 +1699,11 @@ export default function App() {
                 {/* Active Group */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-black text-[#1E3A8A] uppercase tracking-widest pl-1 text-left">
-                    {lang === 'it' ? `Attivi (${activeMedsList.length})` : `Active (${activeMedsList.length})`}
+                    {`${t.activeMedsLabel} (${activeMedsList.length})`}
                   </h4>
                   {activeMedsList.length === 0 ? (
                     <div className="bg-white/50 border border-dashed border-gray-200 rounded-3xl p-6 text-center text-xs text-gray-400 italic">
-                      {lang === 'it' ? "Nessun farmaco attivo." : "No active medications."}
+                      {t.noActiveMeds}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1715,11 +1715,11 @@ export default function App() {
                 {/* Inactive Group */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 text-left">
-                    {lang === 'it' ? `Disattivati (${inactiveMedsList.length})` : `Inactive (${inactiveMedsList.length})`}
+                    {`${t.inactiveMedsLabel} (${inactiveMedsList.length})`}
                   </h4>
                   {inactiveMedsList.length === 0 ? (
                     <div className="bg-white/50 border border-dashed border-gray-200 rounded-3xl p-6 text-center text-xs text-gray-400 italic">
-                      {lang === 'it' ? "Nessun farmaco disattivato." : "No inactive medications."}
+                      {t.noInactiveMeds}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1831,7 +1831,7 @@ export default function App() {
                         type="button"
                         onClick={() => {
                           setSpeechTone('empathetic');
-                          speakAnnouncement(lang === 'it' ? 'Tono empatico attivato' : 'Empathetic tone active', lang, speechSpeed, 'empathetic');
+                          speakAnnouncement(t.toneEmpatheticActive, lang, speechSpeed, 'empathetic');
                         }}
                         className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${
                           speechTone === 'empathetic' 
@@ -1847,7 +1847,7 @@ export default function App() {
                         type="button"
                         onClick={() => {
                           setSpeechTone('firm');
-                          speakAnnouncement(lang === 'it' ? 'Tono deciso attivato' : 'Firm tone active', lang, speechSpeed, 'firm');
+                          speakAnnouncement(t.toneFirmActive, lang, speechSpeed, 'firm');
                         }}
                         className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${
                           speechTone === 'firm' 
@@ -1874,15 +1874,12 @@ export default function App() {
                   <button
                     id="trigger-settings-voice-tutorial"
                     onClick={() => {
-                      const tutorialText = lang === 'it' 
-                        ? "Benvenuto nel tutorial. Quando senti l'avviso della medicina, puoi dire 'Sì' o 'Preso' per confermare l'assunzione. Oppure puoi toccare il pulsante rosso sullo schermo per rimandare l'allarme di qualche minuto."
-                        : "Welcome to the tutorial. When you hear the medicine alert, say 'Yes' or 'Taken' to confirm. Or, you can tap the red button on the screen to snooze the alarm for a few minutes.";
-                      speakAnnouncement(tutorialText, lang, speechSpeed, speechTone);
+                      speakAnnouncement(t.voiceTutorialText, lang, speechSpeed, speechTone);
                     }}
                     className={`w-full py-4 px-5 bg-white hover:bg-slate-50 active:bg-slate-100 ${theme.text} font-extrabold text-sm rounded-xl border-2 border-slate-200 hover:border-slate-300 active:border-slate-400 shadow-sm transition-all flex justify-center items-center gap-2.5 mt-3 active:scale-[0.97] cursor-pointer`}
                   >
                     <Sparkles className="w-5 h-5 shrink-0" />
-                    <span>{lang === 'it' ? "Ascolta Tutorial Vocale" : "Listen to Voice Tutorial"}</span>
+                    <span>{t.listenTutorialBtn}</span>
                   </button>
 
                   {/* Dynamic Voice Soundwave Indicator */}
@@ -1906,14 +1903,14 @@ export default function App() {
                       <div className="text-left flex-1 min-w-0">
                         <p className={`text-xs font-black leading-tight ${isSpeaking ? theme.text : 'text-gray-500'}`}>
                           {isSpeaking 
-                            ? (lang === 'it' ? "Riproduzione Vocale Attiva" : "Vocal Synthesis Active")
-                            : (lang === 'it' ? "Feedback Vocale Inattivo" : "Vocal Feedback Inactive")
+                            ? (lang === 'de' ? "Sprachausgabe aktiv" : lang === 'es' ? "Reproducción de voz activa" : lang === 'fr' ? "Lecture vocale active" : lang === 'it' ? "Riproduzione Vocale Attiva" : "Vocal Synthesis Active")
+                            : (lang === 'de' ? "Sprach-Feedback inaktiv" : lang === 'es' ? "Retroalimentación vocal inactiva" : lang === 'fr' ? "Retour vocal inactif" : lang === 'it' ? "Feedback Vocale Inattivo" : "Vocal Feedback Inactive")
                           }
                         </p>
                         <p className="text-[10px] font-bold text-gray-450 leading-normal mt-0.5">
                           {isSpeaking 
-                            ? (lang === 'it' ? "L'assistente sta parlando..." : "The voice is speaking...")
-                            : (lang === 'it' ? "Avvia un test vocale per ascoltare" : "Play a voice test to hear")
+                            ? (lang === 'de' ? "Die Stimme spricht..." : lang === 'es' ? "La voz está hablando..." : lang === 'fr' ? "La voix parle..." : lang === 'it' ? "L'assistente sta parlando..." : "The voice is speaking...")
+                            : (lang === 'de' ? "Sprachtest starten zum Anhören" : lang === 'es' ? "Inicie una prueba de voz para escuchar" : lang === 'fr' ? "Lancez un test vocal pour écouter" : lang === 'it' ? "Avvia un test vocale per ascoltare" : "Play a voice test to hear")
                           }
                         </p>
                       </div>
@@ -1925,7 +1922,7 @@ export default function App() {
 
                 {/* VISUAL & DEVICE PREFERENCES */}
                 <div className="mb-6 text-left space-y-4">
-                  <h3 className={`text-xl font-extrabold ${appTheme === 'dark' ? 'text-white' : 'text-[#1E3A8A]'}`}>Preferenze Dispositivo</h3>
+                  <h3 className={`text-xl font-extrabold ${appTheme === 'dark' ? 'text-white' : 'text-[#1E3A8A]'}`}>{t.devicePreferences}</h3>
                   
                   {/* Theme Accent Color Swatches (TEMA) */}
                   <div className="space-y-2">
@@ -2095,11 +2092,11 @@ export default function App() {
                 <div className="mb-6 text-left">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xl font-extrabold text-[#FF5A33]">
-                      {lang === 'it' ? "Emergenza" : "Emergency"}
+                      {t.emergencyTitle}
                     </h3>
                   </div>
                   <div className={`text-sm font-medium mb-3 ${appTheme === 'dark' ? 'text-slate-300' : 'text-slate-500'}`}>
-                    {lang === 'it' ? "Imposta il numero per chiamare un parente o il soccorso in caso di emergenza." : "Set the number to reach out a relative or ambulance in case of emergency."}
+                    {t.emergencySub}
                   </div>
                   
                   <div className="space-y-3">
@@ -2121,7 +2118,7 @@ export default function App() {
                         className="w-full py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md transition-all block cursor-pointer text-center"
                       >
                         <Heart className="w-4 h-4" />
-                        <span>{lang === 'it' ? "Chiama Ora" : "Call Now"}</span>
+                        <span>{t.callNow}</span>
                       </a>
                     )}
                   </div>
@@ -2134,13 +2131,11 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <Coffee className="w-5 h-5 text-amber-600" />
                     <h3 className="text-xl font-extrabold text-amber-700">
-                      {lang === 'it' ? "Supporta lo Sviluppatore" : "Support the Developer"}
+                      {t.supportDevTitle}
                     </h3>
                   </div>
                   <div className="text-sm text-amber-800/80 font-semibold leading-relaxed">
-                    {lang === 'it' 
-                      ? "Se trovi utile questa app e vuoi aiutarmi a mantenerla gratuita e senza pubblicità, puoi offrirmi un caffè!" 
-                      : "If you find this app helpful and want to help me keep it free and without ads, consider buying me a coffee!"}
+                    {t.supportDevText}
                   </div>
                   <button
                     onClick={() => {
@@ -2150,7 +2145,7 @@ export default function App() {
                     className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
                   >
                     <Heart className="w-4 h-4" />
-                    <span>{lang === 'it' ? "Dona 1,99€" : "Donate 1.99€"}</span>
+                    <span>{t.donateBtn}</span>
                   </button>
                 </div>
 
@@ -2211,7 +2206,7 @@ export default function App() {
             }`}
           >
             <Calendar className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Oggi" : "Today"}</span>
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{t.tabToday}</span>
           </button>
 
           <button
@@ -2222,7 +2217,7 @@ export default function App() {
             }`}
           >
             <Pill className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Farmaci" : "Meds"}</span>
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{t.tabMeds}</span>
           </button>
 
           <button
@@ -2233,7 +2228,7 @@ export default function App() {
             }`}
           >
             <MapPin className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Farmacie" : "Pharmacies"}</span>
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{t.tabPharmacies}</span>
           </button>
 
           <button
@@ -2244,7 +2239,7 @@ export default function App() {
             }`}
           >
             <Settings className="w-6 h-6" />
-            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{lang === 'it' ? "Setup" : "Setup"}</span>
+            <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{t.tabSetup}</span>
           </button>
         </nav>
 

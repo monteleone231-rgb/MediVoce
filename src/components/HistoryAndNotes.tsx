@@ -57,37 +57,32 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
     });
 
     const complianceText = totalScheduledToday === 0 
-      ? (lang === 'it' ? 'Nessun farmaco programmato per oggi.' : 'No medications scheduled for today.')
+      ? t.noMedsToday
       : (lang === 'it' 
           ? `Presi ${takenToday} di ${totalScheduledToday} farmaci (${Math.round((takenToday/totalScheduledToday)*100)}%)` 
+          : lang === 'es'
+          ? `Tomados ${takenToday} de ${totalScheduledToday} medicamentos (${Math.round((takenToday/totalScheduledToday)*100)}%)`
+          : lang === 'fr'
+          ? `Pris ${takenToday} sur ${totalScheduledToday} médicaments (${Math.round((takenToday/totalScheduledToday)*100)}%)`
+          : lang === 'de'
+          ? `${takenToday} von ${totalScheduledToday} Medikamenten eingenommen (${Math.round((takenToday/totalScheduledToday)*100)}%)`
           : `Took ${takenToday} of ${totalScheduledToday} meds (${Math.round((takenToday/totalScheduledToday)*100)}%)`);
 
-    const wellbeingEmoji = todayWellBeingScore === 5 ? '😊' : todayWellBeingScore === 4 ? '🙂' : todayWellBeingScore === 3 ? '😐' : todayWellBeingScore === 2 ? '🙁' : todayWellBeingScore === 1 ? '😔' : 'Non registrato / Not logged';
+    const wellbeingEmoji = todayWellBeingScore === 5 ? '😊' : todayWellBeingScore === 4 ? '🙂' : todayWellBeingScore === 3 ? '😐' : todayWellBeingScore === 2 ? '🙁' : todayWellBeingScore === 1 ? '😔' : '-';
 
     // Get today's notes
     const todayNotes = notes.filter(n => n.date === todayStr);
     const notesText = todayNotes.length === 0 
-      ? (lang === 'it' ? 'Nessun sintomo o nota inserita.' : 'No notes or symptoms reported.')
-      : todayNotes.map(n => `- [${n.hasSymptom ? 'Sintomo' : 'Nota'}]: ${n.text}`).join('\n');
+      ? t.noNotesYet
+      : todayNotes.map(n => `- [${n.hasSymptom ? 'Med' : 'Note'}]: ${n.text}`).join('\n');
 
-    const report = lang === 'it' ? `📋 **REPORT SALUTE MEDIVOCE** (${todayStr})
---------------------------------------
-👤 Paziente: Assistito MediVoce
-📈 Aderenza Farmaci Oggi: ${complianceText}
-🌸 Stato di Benessere: ${wellbeingEmoji} ${todayWellBeingScore ? `(${todayWellBeingScore}/5)` : ''}
-
-📝 Note e Sintomi registrati oggi:
-${notesText}
-
----
-Inviato tramite l'app MediVoce.` 
-: `📋 **MEDIVOCE HEALTH REPORT** (${todayStr})
+    const report = `📋 **MEDIVOCE HEALTH REPORT** (${todayStr})
 --------------------------------------
 👤 Patient: MediVoce User
-📈 Medication Adherence Today: ${complianceText}
-🌸 Well-Being Status: ${wellbeingEmoji} ${todayWellBeingScore ? `(${todayWellBeingScore}/5)` : ''}
+📈 ${t.todayMedsTitle}: ${complianceText}
+🌸 ${t.howDoYouFeel}: ${wellbeingEmoji} ${todayWellBeingScore ? `(${todayWellBeingScore}/5)` : ''}
 
-📝 Notes & Symptoms logged today:
+📝 ${t.notesTitle}:
 ${notesText}
 
 ---
@@ -257,16 +252,16 @@ Sent via MediVoce app.`;
 
           <p className="text-3xs text-gray-500 leading-relaxed font-semibold">
             {currentRate === 100 
-              ? (lang === 'it' ? "Aderenza perfetta o dati in calcolo per il mese." : "Perfect adherence or calculating monthly data.")
-              : (lang === 'it' ? "Questi dati includono il calcolo mensile basato sull'attività recente." : "Monthly statistics are calculated from recent activity.")}
+              ? t.perfectAdherenceMsg
+              : t.monthlyStatsSub}
           </p>
         </div>
 
         {/* Monthly Calendar View (Placeholder for advanced full-month rendering) */}
         <div className="bg-[#EFF6FF]/65 border border-[#DBEAFE] p-4 rounded-xl mt-4">
           <h4 className="text-xs font-bold text-[#1E3A8A] uppercase tracking-wide mb-3 flex items-center justify-between">
-            {lang === 'it' ? "Calendario Dosi Mensile" : "Monthly Dosage Calendar"}
-            <span className="text-[#2563EB]">{new Date().toLocaleString(lang==='it'?'it-IT':'en-US', { month: 'long', year: 'numeric' })}</span>
+            {t.monthlyDosageCalendar}
+            <span className="text-[#2563EB]">{new Date().toLocaleString(lang==='it'?'it-IT':lang==='es'?'es-ES':lang==='fr'?'fr-FR':lang==='de'?'de-DE':'en-US', { month: 'long', year: 'numeric' })}</span>
           </h4>
           <div className="grid grid-cols-7 gap-1 text-center text-3xs font-semibold text-[#64748B] mb-1">
             {weekdays.map(d => <div key={d.label}>{d.label.substring(0,2)}</div>)}
@@ -351,7 +346,7 @@ Sent via MediVoce app.`;
         {/* Day-specific compliance breakdown details list */}
         <div className="border-t border-[#E2E8F0] pt-4">
           <h4 className="text-xs font-bold text-[#64748B] mb-2 uppercase tracking-wide">
-            {lang === 'it' ? "Dettaglio di " : "Details for "} {weekdays[activeDayIndex].label}
+            {t.detailsFor} {weekdays[activeDayIndex].label}
           </h4>
 
           {(() => {
@@ -363,7 +358,7 @@ Sent via MediVoce app.`;
             if (activeMeds.length === 0) {
               return (
                 <p className="text-sm italic text-gray-400 py-2">
-                  {lang === 'it' ? "Nessuna medicina programmata per oggi." : "No medications scheduled for this day."}
+                  {t.noMedsForDay}
                 </p>
               );
             }
@@ -391,7 +386,7 @@ Sent via MediVoce app.`;
                               : 'bg-rose-100 text-rose-800'
                           }`}>
                             {isTaken ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                            <span>{isTaken ? (lang === 'it' ? 'Presa' : 'Taken') : (lang === 'it' ? 'Salto' : 'Pending')}</span>
+                            <span>{isTaken ? t.takenStatus : t.pendingStatus}</span>
                           </span>
                           <span className="text-[10px] text-gray-400 font-medium">({timeSlot})</span>
                         </div>
@@ -415,10 +410,10 @@ Sent via MediVoce app.`;
             </div>
             <div className="text-left">
               <h3 className="text-lg font-extrabold text-[#1E3A8A] tracking-tight">
-                {lang === 'it' ? "Come ti senti oggi?" : "How do you feel today?"}
+                {t.howDoYouFeel}
               </h3>
               <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider text-left">
-                {lang === 'it' ? "Stato di salute e condivisione" : "Well-being & caregiver report"}
+                {t.wellbeingSubtitle}
               </p>
             </div>
           </div>
@@ -427,11 +422,11 @@ Sent via MediVoce app.`;
         {/* Clickable Emoji ratings */}
         <div className="grid grid-cols-5 gap-2 pt-1">
           {([
-            { score: 1, emoji: '😔', label: { it: 'Triste', en: 'Sad' } },
-            { score: 2, emoji: '🙁', label: { it: 'Giù', en: 'Unwell' } },
-            { score: 3, emoji: '😐', label: { it: 'Così così', en: 'Okay' } },
-            { score: 4, emoji: '🙂', label: { it: 'Bene', en: 'Good' } },
-            { score: 5, emoji: '😊', label: { it: 'Ottimo', en: 'Great' } }
+            { score: 1, emoji: '😔', label: { it: 'Triste', en: 'Sad', es: 'Triste', fr: 'Triste', de: 'Traurig' } },
+            { score: 2, emoji: '🙁', label: { it: 'Giù', en: 'Unwell', es: 'Mal', fr: 'Mal', de: 'Unwohl' } },
+            { score: 3, emoji: '😐', label: { it: 'Così così', en: 'Okay', es: 'Regular', fr: 'Comme ci comme ça', de: 'Mittel' } },
+            { score: 4, emoji: '🙂', label: { it: 'Bene', en: 'Good', es: 'Bien', fr: 'Bien', de: 'Gut' } },
+            { score: 5, emoji: '😊', label: { it: 'Ottimo', en: 'Great', es: 'Excelente', fr: 'Excellent', de: 'Ausgezeichnet' } }
           ]).map((item) => {
             const isSelected = todayWellBeingScore === item.score;
             return (
@@ -462,12 +457,10 @@ Sent via MediVoce app.`;
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-xs font-bold text-[#1E3A8A]">
-                {lang === 'it' ? "Invia Report al Caregiver" : "Share Report with Caregiver"}
+                {t.shareReportTitle}
               </h4>
               <p className="text-[11px] text-gray-500 font-medium leading-normal mt-0.5">
-                {lang === 'it' 
-                  ? "Crea un report di oggi con medicinali presi, sintomi e livello di benessere pronto da inviare su WhatsApp o SMS." 
-                  : "Copies a formatted summary of today's compliance, wellness score, and notes to share."}
+                {t.shareReportSub}
               </p>
             </div>
           </div>
@@ -484,12 +477,12 @@ Sent via MediVoce app.`;
             {showShareToast ? (
               <>
                 <Check className="w-4 h-4 animate-bounce" />
-                <span>{lang === 'it' ? "Report Copiato!" : "Report Copied!"}</span>
+                <span>{t.reportCopied}</span>
               </>
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                <span>{lang === 'it' ? "Copia Report Giornaliero" : "Copy Today's Report"}</span>
+                <span>{t.copyDailyReport}</span>
               </>
             )}
           </button>

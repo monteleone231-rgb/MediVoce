@@ -295,7 +295,10 @@ export function speakAnnouncement(
     let targetLocale = 'it-IT';
     let langPrefix = 'it';
     
-    if (lang === 'es') {
+    if (lang === 'de') {
+      targetLocale = 'de-DE';
+      langPrefix = 'de';
+    } else if (lang === 'es') {
       targetLocale = 'es-ES';
       langPrefix = 'es';
     } else if (lang === 'fr') {
