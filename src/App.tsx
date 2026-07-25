@@ -2042,8 +2042,8 @@ export default function App() {
                   {/* Vibration Toggle */}
                   <div className="pt-2">
                     <div className="flex items-center justify-between gap-4">
-                      <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.vibrationSetting}</span>
-                      <div className="flex items-center gap-2.5">
+                      <span className={`text-sm font-bold flex-1 min-w-0 ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.vibrationSetting}</span>
+                      <div className="flex items-center gap-2.5 shrink-0">
                         <button 
                           id="toggle-vibration"
                           onClick={() => {
@@ -2056,7 +2056,7 @@ export default function App() {
                               }, 50);
                             }
                           }}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${vibrationEnabled ? theme.primary : 'bg-[#333]'}`}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${vibrationEnabled ? theme.primary : 'bg-[#333]'}`}
                         >
                           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${vibrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
@@ -2066,10 +2066,10 @@ export default function App() {
 
                   {/* Always On Display Toggle */}
                   <div className="flex items-center justify-between gap-4 pt-2">
-                    <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.alwaysOnSetting}</span>
+                    <span className={`text-sm font-bold flex-1 min-w-0 ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.alwaysOnSetting}</span>
                     <button 
                       onClick={() => setAlwaysOnDisplay(!alwaysOnDisplay)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${alwaysOnDisplay ? theme.primary : 'bg-[#333]'}`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${alwaysOnDisplay ? theme.primary : 'bg-[#333]'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${alwaysOnDisplay ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
@@ -2077,11 +2077,11 @@ export default function App() {
 
                   {/* Voice Announcements Toggle */}
                   <div className="flex items-center justify-between gap-4 pt-2 border-t border-[#F1F5F9]">
-                    <span className={`text-sm font-bold ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.voiceAnnounceSetting}</span>
+                    <span className={`text-sm font-bold flex-1 min-w-0 ${appTheme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{t.voiceAnnounceSetting}</span>
                     <button 
                       id="toggle-voice-announcements"
                       onClick={() => setVoiceAnnounceEnabled(!voiceAnnounceEnabled)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${voiceAnnounceEnabled ? theme.primary : 'bg-[#333]'}`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${voiceAnnounceEnabled ? theme.primary : 'bg-[#333]'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${voiceAnnounceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
