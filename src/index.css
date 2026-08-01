@@ -20,6 +20,38 @@
   transform-origin: center;
 }
 
+@keyframes pulse-btn-blue {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+@keyframes pulse-btn-amber {
+  0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+}
+@keyframes pulse-btn-purple {
+  0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(147, 51, 234, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
+}
+@keyframes pulse-btn-emerald {
+  0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(5, 150, 105, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+}
+@keyframes pulse-btn-rose {
+  0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+.animate-pulse-blue { animation: pulse-btn-blue 2s infinite; }
+.animate-pulse-amber { animation: pulse-btn-amber 2s infinite; }
+.animate-pulse-purple { animation: pulse-btn-purple 2s infinite; }
+.animate-pulse-emerald { animation: pulse-btn-emerald 2s infinite; }
+.animate-pulse-rose { animation: pulse-btn-rose 2s infinite; }
+
 .animation-delay-75 {
   animation-delay: 75ms;
 }

@@ -17,6 +17,24 @@ plugins {
     id("com.google.devtools.ksp") version "1.9.22-1.0.17" apply false
 }
 
+subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.application") || plugins.hasPlugin("com.android.library")) {
+            configure<com.android.build.gradle.BaseExtension> {
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_17
+                    targetCompatibility = JavaVersion.VERSION_17
+                }
+            }
+        }
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+}
+
 buildscript {
     repositories {
         google()
