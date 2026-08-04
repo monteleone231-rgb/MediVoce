@@ -511,6 +511,28 @@ export default function App() {
     }
   }, [lang, voiceAnnounceEnabled, speechSpeed, speechTone]);
 
+  // Stop ongoing voice announcements and device sounds when the active reminder is dismissed, taken, or closed
+  useEffect(() => {
+    if (!activeVoiceReminder) {
+      // Stop voice speech synthesis
+      try {
+        stopSpeaking();
+      } catch (e) {
+        console.warn("Failed to stop speaking on activeVoiceReminder clear:", e);
+      }
+
+      // Stop native device alarm/sound
+      const android = (window as any).Android;
+      if (android && typeof android.stopDeviceSound === 'function') {
+        try {
+          android.stopDeviceSound();
+        } catch (e) {
+          console.error("Failed to stop native device sound on activeVoiceReminder clear:", e);
+        }
+      }
+    }
+  }, [activeVoiceReminder]);
+
   const theme = THEME_MAP[colorTheme];
 
   // Handle Wakelock for Always On Display during notification
@@ -1386,6 +1408,16 @@ export default function App() {
                   <button
                     id="manual-confirm-alert"
                     onClick={() => {
+                      // Stop speaking and alarms immediately
+                      try {
+                        stopSpeaking();
+                      } catch (e) {}
+                      const android = (window as any).Android;
+                      if (android && typeof android.stopDeviceSound === 'function') {
+                        try {
+                          android.stopDeviceSound();
+                        } catch (e) {}
+                      }
                       toggleTakenStatusForSlot(activeVoiceReminder, activeVoiceReminderSlot);
                       setActiveVoiceReminder(null);
                     }}
@@ -1399,6 +1431,16 @@ export default function App() {
                 <button
                   id="rimanda-alert-btn"
                   onClick={() => {
+                    // Stop speaking and alarms immediately
+                    try {
+                      stopSpeaking();
+                    } catch (e) {}
+                    const android = (window as any).Android;
+                    if (android && typeof android.stopDeviceSound === 'function') {
+                      try {
+                        android.stopDeviceSound();
+                      } catch (e) {}
+                    }
                     if (activeVoiceReminder) {
                       const todayStr = getLocalIsoDate();
                       const actualSlot = activeVoiceReminderSlot || activeVoiceReminder.times?.[0] || activeVoiceReminder.time;
