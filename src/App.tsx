@@ -14,7 +14,7 @@ import {
 import { IT, US, ES, FR, DE } from 'country-flag-icons/react/3x2';
 
 import { LanguageCode, Medication, MedicationCategory, DoctorNote, TRANSLATIONS } from './types';
-import { playAlarmTone, speakAnnouncement, stopSpeaking, BARCODE_MOCK_DATABASE, getLocalIsoDate, isScheduledOnDate } from './utils';
+import { playAlarmTone, speakAnnouncement, stopSpeaking, BARCODE_MOCK_DATABASE, getLocalIsoDate, isScheduledOnDate, getNextOccurrence, formatMedicationSchedule } from './utils';
 import Onboarding from './components/Onboarding';
 import PharmacyLocator from './components/PharmacyLocator';
 import HistoryAndNotes from './components/HistoryAndNotes';
@@ -649,13 +649,8 @@ export default function App() {
          if (med.isActive) {
            medTimes.forEach((timeSlot, idx) => {
              const slotNativeId = nativeId + idx;
-             const [hours, minutes] = timeSlot.split(':').map(Number);
              const now = new Date();
-             const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-             
-             if (target.getTime() <= now.getTime()) {
-               target.setDate(target.getDate() + 1);
-             }
+             const target = getNextOccurrence(med, timeSlot, now);
 
              try {
                android.scheduleAlarm(target.getTime(), slotNativeId, med.name);
@@ -688,7 +683,10 @@ export default function App() {
                nativeId: m.nativeId! + idx,
                name: m.name,
                time: timeSlot,
-               isActive: m.isActive
+               isActive: m.isActive,
+               frequencyType: m.frequencyType || 'weekly',
+               weeklySchedule: m.weeklySchedule,
+               monthlyDay: m.monthlyDay
              });
            });
          });
@@ -814,7 +812,7 @@ export default function App() {
     setFormTimes(med.times && med.times.length > 0 ? med.times : [med.time]);
     setFormNotes(med.notes);
     setFormCategory(med.category);
-    setFormSchedule(med.weeklySchedule);
+    setFormSchedule(med.weeklySchedule || [1, 2, 3, 4, 5, 6, 0]);
     setFormFrequencyType(med.frequencyType || 'weekly');
     setFormMonthlyDay(med.monthlyDay || 1);
     setFormVoicePrompt(med.voicePrompt);
@@ -1179,6 +1177,7 @@ export default function App() {
 
   const activeMedsList = filteredMeds.filter(m => m.isActive);
   const inactiveMedsList = filteredMeds.filter(m => !m.isActive);
+  const otherActiveMeds = medications.filter(m => m.isActive && !isScheduledOnDate(m, currentTime));
 
   const renderMedicationRow = (med: Medication) => {
     const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
@@ -1261,16 +1260,9 @@ export default function App() {
 
         {/* Action buttons (Edit/Delete) */}
         <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
-          <div className="text-[11px] text-slate-400 font-medium">
-            {med.frequencyType === 'monthly' ? (
-              <span className="text-[11px] text-[#E58045] font-bold">
-                📅 {lang === 'it' ? `Giorno ${med.monthlyDay} del mese` : `Day ${med.monthlyDay} of the month`}
-              </span>
-            ) : (
-              <span>
-                🔄 {lang === 'it' ? `Settimanale` : `Settimanale`}
-              </span>
-            )}
+          <div className="text-[11px] text-[#E58045] font-extrabold flex items-center gap-1">
+            <span>🔄</span>
+            <span>{formatMedicationSchedule(med, lang)}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1622,6 +1614,64 @@ export default function App() {
                          </div>
                        );
                      })}
+                   </div>
+                 )}
+
+                 {/* Other Active Reminders section */}
+                 {otherActiveMeds.length > 0 && (
+                   <div className="mt-8 pt-6 border-t border-slate-200/80 space-y-4">
+                     <div className="text-left pl-1">
+                       <h4 className="text-base font-extrabold text-[#1E3A8A] tracking-tight">
+                         {lang === 'it' ? "Altri Promemoria Attivi" :
+                          lang === 'es' ? "Otros Recordatorios Activos" :
+                          lang === 'fr' ? "Autres Rappels Actifs" :
+                          lang === 'de' ? "Andere aktive Erinnerungen" :
+                          "Other Active Reminders"}
+                       </h4>
+                       <p className="text-3xs text-[#64748B] font-bold uppercase tracking-wider">
+                         {lang === 'it' ? "Farmaci attivi programmati per altri giorni" :
+                          lang === 'es' ? "Medicamentos activos programados para otros días" :
+                          lang === 'fr' ? "Traitements actifs prévus pour d'autres jours" :
+                          lang === 'de' ? "Aktive Medikamente, die für andere Tage geplant sind" :
+                          "Active medications scheduled for other days"}
+                       </p>
+                     </div>
+                     <div className="grid grid-cols-1 gap-3">
+                       {otherActiveMeds.map((med) => {
+                         const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+                         return (
+                           <div 
+                             id={`other-med-${med.id}`}
+                             key={med.id}
+                             className="p-4 rounded-3xl border border-[#E2E8F0] bg-[#F8FAFC] flex flex-col gap-2 text-left hover:border-[#CBD5E1] transition-all"
+                           >
+                             <div className="flex justify-between items-start gap-2">
+                               <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 rounded-2xl bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-lg shrink-0">
+                                   {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
+                                 </div>
+                                 <div>
+                                   <h5 className="font-extrabold text-slate-700 text-sm leading-tight">{med.name}</h5>
+                                   <p className="text-3xs text-slate-500 font-bold mt-0.5">{med.dosage}</p>
+                                 </div>
+                               </div>
+                               <div className="text-[10px] font-extrabold px-2 py-0.5 bg-amber-50 text-[#E58045] border border-amber-100 rounded-lg shrink-0">
+                                 {formatMedicationSchedule(med, lang)}
+                                </div>
+                             </div>
+                             <div className="flex flex-wrap gap-1.5 items-center mt-1 pt-2 border-t border-[#E2E8F0] text-3xs text-slate-400 font-bold">
+                               <span className="uppercase">{lang === 'it' ? "Orari:" : "Times:"}</span>
+                               {medTimes.map((time, tIdx) => (
+                                 <span key={tIdx} className="inline-flex items-center gap-1 font-extrabold text-slate-600 px-1.5 py-0.5 bg-slate-100 rounded">
+                                   <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                   {time}
+                                 </span>
+                               ))}
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
                    </div>
                  )}
 

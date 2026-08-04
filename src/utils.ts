@@ -618,5 +618,96 @@ export function isScheduledOnDate(med: Medication, date: Date): boolean {
   if (med.frequencyType === 'monthly') {
     return med.monthlyDay !== undefined && date.getDate() === med.monthlyDay;
   }
-  return med.weeklySchedule.includes(date.getDay());
+  return Array.isArray(med.weeklySchedule) && med.weeklySchedule.includes(date.getDay());
+}
+
+export function formatMedicationSchedule(
+  med: { frequencyType?: 'weekly' | 'monthly', weeklySchedule?: number[], monthlyDay?: number },
+  lang: string
+): string {
+  const isIt = lang === 'it';
+  const isEs = lang === 'es';
+  const isFr = lang === 'fr';
+  const isDe = lang === 'de';
+
+  if (med.frequencyType === 'monthly') {
+    const day = med.monthlyDay || 1;
+    if (isIt) return `Mensile (Giorno ${day})`;
+    if (isEs) return `Mensual (Día ${day})`;
+    if (isFr) return `Mensuel (Jour ${day})`;
+    if (isDe) return `Monatlich (Tag ${day})`;
+    return `Monthly (Day ${day})`;
+  }
+
+  const schedule = med.weeklySchedule || [];
+  if (schedule.length === 7) {
+    if (isIt) return "Tutti i giorni";
+    if (isEs) return "Todos los días";
+    if (isFr) return "Tous les jours";
+    if (isDe) return "Jeden Tag";
+    return "Every day";
+  }
+
+  if (schedule.length === 0) {
+    if (isIt) return "Nessun giorno";
+    if (isEs) return "Ningún día";
+    if (isFr) return "Aucun jour";
+    if (isDe) return "Kein Tag";
+    return "No days";
+  }
+
+  const daysIt = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+  const daysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const daysEs = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  const daysFr = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+  const daysDe = ["Son", "Mon", "Die", "Mit", "Don", "Fre", "Sam"];
+
+  const daysList = isIt ? daysIt : isEs ? daysEs : isFr ? daysFr : isDe ? daysDe : daysEn;
+  
+  const sortedSchedule = [...schedule].sort((a, b) => {
+    const valA = a === 0 ? 7 : a;
+    const valB = b === 0 ? 7 : b;
+    return valA - valB;
+  });
+
+  const dayNames = sortedSchedule.map(d => daysList[d]);
+  if (isIt) return `Nei giorni: ${dayNames.join(', ')}`;
+  if (isEs) return `En los días: ${dayNames.join(', ')}`;
+  if (isFr) return `Les jours : ${dayNames.join(', ')}`;
+  if (isDe) return `An den Tagen: ${dayNames.join(', ')}`;
+  return `On days: ${dayNames.join(', ')}`;
+}
+
+export function getNextOccurrence(
+  med: { frequencyType?: 'weekly' | 'monthly', weeklySchedule: number[], monthlyDay?: number },
+  timeSlot: string,
+  now: Date
+): Date {
+  const [hours, minutes] = timeSlot.split(':').map(Number);
+  
+  // Start checking from 'now'
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+  
+  // If the time has already passed today, the earliest possible occurrence is tomorrow (or later)
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+  
+  // Find the first matching day in the next 366 days starting from target
+  for (let i = 0; i < 366; i++) {
+    if (med.frequencyType === 'monthly') {
+      if (med.monthlyDay !== undefined && target.getDate() === med.monthlyDay) {
+        return target;
+      }
+    } else {
+      // Weekly schedule
+      if (med.weeklySchedule.includes(target.getDay())) {
+        return target;
+      }
+    }
+    // Try the next day
+    target.setDate(target.getDate() + 1);
+  }
+  
+  return target;
 }

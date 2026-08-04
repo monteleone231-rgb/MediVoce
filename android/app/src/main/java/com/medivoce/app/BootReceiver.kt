@@ -50,6 +50,17 @@ class BootReceiver : BroadcastReceiver() {
                     continue
                 }
 
+                val frequencyType = alarmObj.optString("frequencyType", "weekly")
+                val monthlyDay = if (alarmObj.has("monthlyDay") && !alarmObj.isNull("monthlyDay")) alarmObj.optInt("monthlyDay") else null
+                
+                val weeklyScheduleList = mutableListOf<Int>()
+                val weeklyScheduleJson = alarmObj.optJSONArray("weeklySchedule")
+                if (weeklyScheduleJson != null) {
+                    for (j in 0 until weeklyScheduleJson.length()) {
+                        weeklyScheduleList.add(weeklyScheduleJson.optInt(j))
+                    }
+                }
+
                 val timeParts = timeStr.split(":")
                 if (timeParts.size != 2) continue
                 val hours = timeParts[0].toIntOrNull() ?: continue
@@ -63,6 +74,23 @@ class BootReceiver : BroadcastReceiver() {
                 }
 
                 if (calendar.timeInMillis <= System.currentTimeMillis()) {
+                    calendar.add(Calendar.DAY_OF_YEAR, 1)
+                }
+
+                // Find the first matching day in the next 366 days
+                for (step in 0 until 366) {
+                    if (frequencyType == "monthly") {
+                        val currentDayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+                        if (monthlyDay != null && currentDayOfMonth == monthlyDay) {
+                            break
+                        }
+                    } else {
+                        // Weekly
+                        val currentJsDay = calendar.get(Calendar.DAY_OF_WEEK) - 1 // Calendar.SUNDAY = 1 -> 0
+                        if (weeklyScheduleList.contains(currentJsDay)) {
+                            break
+                        }
+                    }
                     calendar.add(Calendar.DAY_OF_YEAR, 1)
                 }
 
