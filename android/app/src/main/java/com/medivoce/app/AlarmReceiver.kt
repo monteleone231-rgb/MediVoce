@@ -15,14 +15,20 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getIntExtra("ALARM_ID", -1)
         val name = intent.getStringExtra("MED_NAME") ?: "Medicina"
+        val voicePrompt = intent.getStringExtra("VOICE_PROMPT") ?: ""
+        val dosage = intent.getStringExtra("DOSAGE") ?: ""
+        val timeSlot = intent.getStringExtra("TIME_SLOT") ?: ""
 
-        Log.d(TAG, "Alarm triggered! ID: $id, Name: $name")
+        Log.d(TAG, "Alarm triggered! ID: $id, Name: $name, Prompt: $voicePrompt")
 
         context.runWithWakeLock("medivoce::AlarmWakeLockTag", WAKELOCK_TIMEOUT_MS) {
             // Start the MedicationAlertService to play alert audio
             val serviceIntent = Intent(context, MedicationAlertService::class.java).apply {
                 putExtra("ALARM_ID", id)
                 putExtra("MED_NAME", name)
+                putExtra("VOICE_PROMPT", voicePrompt)
+                putExtra("DOSAGE", dosage)
+                putExtra("TIME_SLOT", timeSlot)
             }
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -35,7 +41,7 @@ class AlarmReceiver : BroadcastReceiver() {
             }
 
             // Trigger visual overlay notification with FullScreenIntent
-            NotificationHelper.showNotification(context, id, name)
+            NotificationHelper.showNotification(context, id, name, voicePrompt, dosage, timeSlot)
         }
     }
 }

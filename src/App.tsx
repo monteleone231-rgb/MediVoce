@@ -675,7 +675,9 @@ export default function App() {
              const target = getNextOccurrence(med, timeSlot, now);
 
              try {
-               android.scheduleAlarm(target.getTime(), slotNativeId, med.name);
+               const prompt = med.voicePrompt || `Attenzione, è l'ora di assumere il farmaco: ${med.name}`;
+               const dosage = med.dosage || '';
+               android.scheduleAlarm(target.getTime(), slotNativeId, med.name, prompt, dosage, timeSlot);
                console.log(`[MediVoce] Native scheduled slot: ${med.name} at ${timeSlot} (${slotNativeId})`);
              } catch (e) {
                console.error(`[MediVoce] Error scheduling slot ${med.name} at ${timeSlot}:`, e);
@@ -705,6 +707,8 @@ export default function App() {
                nativeId: m.nativeId! + idx,
                name: m.name,
                time: timeSlot,
+               dosage: m.dosage || '',
+               voicePrompt: m.voicePrompt || '',
                isActive: m.isActive,
                frequencyType: m.frequencyType || 'weekly',
                weeklySchedule: m.weeklySchedule,
@@ -719,6 +723,56 @@ export default function App() {
        }
     }
   }, [medications]);
+
+  // Sync natively marked taken slots (e.g. from FullScreenAlertActivity) into React state
+  useEffect(() => {
+    const android = (window as any).Android;
+    if (android && typeof android.getTakenSlotsFromNative === 'function') {
+      try {
+        const takenSlotsJson = android.getTakenSlotsFromNative();
+        const takenSlots: string[] = JSON.parse(takenSlotsJson || "[]");
+        if (takenSlots.length > 0) {
+          const todayStr = getLocalIsoDate();
+          setMedications(prev => {
+            let changed = false;
+            const updated = prev.map(med => {
+              const medTimes = med.times && med.times.length > 0 ? med.times : [med.time];
+              let newHistory = { ...(med.history || {}) };
+              let medChanged = false;
+
+              takenSlots.forEach(key => {
+                const parts = key.split('_');
+                if (parts.length >= 3) {
+                  const dateStr = parts[parts.length - 1];
+                  const slot = parts[parts.length - 2];
+                  const name = parts.slice(0, parts.length - 2).join('_');
+
+                  if (name === med.name && dateStr === todayStr) {
+                    const slotKey = `${todayStr}_${slot}`;
+                    const isSingleSlot = medTimes.length === 1;
+                    if (!newHistory[slotKey] || (isSingleSlot && !newHistory[todayStr])) {
+                      newHistory[slotKey] = true;
+                      if (isSingleSlot) newHistory[todayStr] = true;
+                      medChanged = true;
+                    }
+                  }
+                }
+              });
+
+              if (medChanged) {
+                changed = true;
+                return { ...med, history: newHistory };
+              }
+              return med;
+            });
+            return changed ? updated : prev;
+          });
+        }
+      } catch (e) {
+        console.error("[MediVoce] Error syncing native taken slots:", e);
+      }
+    }
+  }, [medications.length]);
 
   // Time-of-day contextual Greeting Selector
   const getContextualGreeting = () => {
@@ -895,6 +949,16 @@ export default function App() {
           if (item.stockCurrent !== undefined) {
             newStock = Math.max(0, item.stockCurrent - 1);
           }
+          
+          const android = (window as any).Android;
+          if (android && typeof android.markSlotTakenInNative === 'function') {
+            try {
+              android.markSlotTakenInNative(med.name, actualSlot, todayStr);
+            } catch (e) {
+              console.error("[MediVoce] Error calling markSlotTakenInNative:", e);
+            }
+          }
+
           // Play a delightful micro sound confirming action
           playAlarmTone('preset_trillo');
           

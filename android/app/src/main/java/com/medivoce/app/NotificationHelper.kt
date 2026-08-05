@@ -12,7 +12,14 @@ object NotificationHelper {
     private const val CHANNEL_ID = "medivoce_critical_reminders"
     private const val CHANNEL_NAME = "Promemoria Farmaci MediVoce"
 
-    fun showNotification(context: Context, id: Int, medName: String) {
+    fun showNotification(
+        context: Context,
+        id: Int,
+        medName: String,
+        voicePrompt: String = "",
+        dosage: String = "",
+        timeSlot: String = ""
+    ) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -33,6 +40,9 @@ object NotificationHelper {
         val fullScreenIntent = Intent(context, FullScreenAlertActivity::class.java).apply {
             putExtra("ALARM_ID", id)
             putExtra("MED_NAME", medName)
+            putExtra("VOICE_PROMPT", voicePrompt)
+            putExtra("DOSAGE", dosage)
+            putExtra("TIME_SLOT", timeSlot)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 

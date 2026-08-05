@@ -10,12 +10,22 @@ import android.util.Log
 class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
 
-    fun scheduleExactAlarm(timeMillis: Long, id: Int, name: String) {
+    fun scheduleExactAlarm(
+        timeMillis: Long,
+        id: Int,
+        name: String,
+        voicePrompt: String = "",
+        dosage: String = "",
+        timeSlot: String = ""
+    ) {
         if (alarmManager == null) return
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("ALARM_ID", id)
             putExtra("MED_NAME", name)
+            putExtra("VOICE_PROMPT", voicePrompt)
+            putExtra("DOSAGE", dosage)
+            putExtra("TIME_SLOT", timeSlot)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

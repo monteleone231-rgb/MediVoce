@@ -40,13 +40,21 @@ class FullScreenAlertActivity : ComponentActivity() {
 
         val id = intent.getIntExtra("ALARM_ID", -1)
         val medName = intent.getStringExtra("MED_NAME") ?: "Medicina"
+        val voicePrompt = intent.getStringExtra("VOICE_PROMPT") ?: ""
+        val dosage = intent.getStringExtra("DOSAGE") ?: ""
+        val timeSlot = intent.getStringExtra("TIME_SLOT") ?: ""
 
         setContent {
             FullScreenAlertScreen(
                 medName = medName,
+                dosage = dosage,
+                timeSlot = timeSlot,
+                voicePrompt = voicePrompt,
                 onTaken = {
                     stopAlertService()
                     NotificationHelper.cancelNotification(this, id)
+                    markSlotTaken(medName, timeSlot)
+                    openMainActivity()
                     finish()
                 },
                 onSnooze = {
@@ -55,6 +63,37 @@ class FullScreenAlertActivity : ComponentActivity() {
                     finish()
                 }
             )
+        }
+    }
+
+    private fun markSlotTaken(medName: String, timeSlot: String) {
+        try {
+            val todayDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val prefs = getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+            val currentJsonStr = prefs.getString("taken_slots_json", "[]") ?: "[]"
+            val array = org.json.JSONArray(currentJsonStr)
+            val key = "${medName}_${timeSlot}_$todayDate"
+            var exists = false
+            for (i in 0 until array.length()) {
+                if (array.getString(i) == key) { exists = true; break }
+            }
+            if (!exists) {
+                array.put(key)
+                prefs.edit().putString("taken_slots_json", array.toString()).apply()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("FullScreenAlert", "Error marking slot taken natively", e)
+        }
+    }
+
+    private fun openMainActivity() {
+        try {
+            val mainIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            startActivity(mainIntent)
+        } catch (e: Exception) {
+            android.util.Log.e("FullScreenAlert", "Error launching MainActivity", e)
         }
     }
 
@@ -70,6 +109,9 @@ class FullScreenAlertActivity : ComponentActivity() {
 @Composable
 fun FullScreenAlertScreen(
     medName: String,
+    dosage: String = "",
+    timeSlot: String = "",
+    voicePrompt: String = "",
     onTaken: () -> Unit,
     onSnooze: () -> Unit
 ) {
@@ -86,52 +128,84 @@ fun FullScreenAlertScreen(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 40.dp)
+                modifier = Modifier.padding(top = 24.dp)
             ) {
                 Text(
-                    text = "MEDIVOCE",
-                    color = Color(0xFF38BDF8),
-                    fontSize = 18.sp,
+                    text = "🔊 SVEGLIA VOCALE",
+                    color = Color(0xFFF97316),
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Ora di prendere il tuo farmaco!",
+                    text = medName,
                     color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center
                 )
+                if (dosage.isNotBlank() || timeSlot.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = listOf(dosage, timeSlot).filter { it.isNotBlank() }.joinToString(" • "),
+                        color = Color(0xFFFDBA74),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            if (voicePrompt.isNotBlank()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
                 ) {
-                    Text(
-                        text = "FARMACI DA ASSUMERE:",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = medName,
-                        color = Color.White,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 44.sp
-                    )
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "\"$voicePrompt\"",
+                            color = Color(0xFFFEF08A),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 24.sp
+                        )
+                    }
+                }
+            } else {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "FARMACI DA ASSUMERE:",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = medName,
+                            color = Color.White,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 

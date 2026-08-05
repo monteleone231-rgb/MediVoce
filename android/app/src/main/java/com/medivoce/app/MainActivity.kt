@@ -262,9 +262,35 @@ class MainActivity : BridgeActivity(), TextToSpeech.OnInitListener {
         }
 
         @JavascriptInterface
-        fun scheduleAlarm(timeMillis: Long, id: Int, name: String) {
-            scheduler.scheduleExactAlarm(timeMillis, id, name)
+        fun scheduleAlarm(timeMillis: Long, id: Int, name: String, voicePrompt: String = "", dosage: String = "", timeSlot: String = "") {
+            scheduler.scheduleExactAlarm(timeMillis, id, name, voicePrompt, dosage, timeSlot)
             Log.d("MediVoceNative", "Scheduled alarm: $name (ID: $id) at $timeMillis")
+        }
+
+        @JavascriptInterface
+        fun getTakenSlotsFromNative(): String {
+            val prefs = context.getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+            return prefs.getString("taken_slots_json", "[]") ?: "[]"
+        }
+
+        @JavascriptInterface
+        fun markSlotTakenInNative(medName: String, timeSlot: String, dateStr: String) {
+            try {
+                val prefs = context.getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+                val currentJsonStr = prefs.getString("taken_slots_json", "[]") ?: "[]"
+                val array = JSONArray(currentJsonStr)
+                val key = "${medName}_${timeSlot}_$dateStr"
+                var exists = false
+                for (i in 0 until array.length()) {
+                    if (array.getString(i) == key) { exists = true; break }
+                }
+                if (!exists) {
+                    array.put(key)
+                    prefs.edit { putString("taken_slots_json", array.toString()) }
+                }
+            } catch (e: Exception) {
+                Log.e("MediVoceNative", "Error marking slot taken in native", e)
+            }
         }
 
         @JavascriptInterface

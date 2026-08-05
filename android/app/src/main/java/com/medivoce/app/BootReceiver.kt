@@ -94,8 +94,11 @@ class BootReceiver : BroadcastReceiver() {
                     calendar.add(Calendar.DAY_OF_YEAR, 1)
                 }
 
+                val voicePrompt = alarmObj.optString("voicePrompt", "")
+                val dosage = alarmObj.optString("dosage", "")
+
                 val timeMillis = calendar.timeInMillis
-                scheduler.scheduleExactAlarm(timeMillis, id, name)
+                scheduler.scheduleExactAlarm(timeMillis, id, name, voicePrompt, dosage, timeStr)
                 Log.d(TAG, "Re-scheduled alarm: $name (ID: $id) at $timeStr (Target: $timeMillis)")
             }
         } catch (e: JSONException) {

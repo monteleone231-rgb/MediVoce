@@ -22,6 +22,9 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
     private var ringtone: Ringtone? = null
     private var tts: TextToSpeech? = null
     private var medName: String = "Medicina"
+    private var voicePrompt: String = ""
+    private var dosage: String = ""
+    private var timeSlot: String = ""
 
     companion object {
         private const val TAG = "MedicationAlertService"
@@ -46,7 +49,32 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         medName = intent?.getStringExtra("MED_NAME") ?: "Medicina"
-        Log.d(TAG, "Service started for $medName")
+        voicePrompt = intent?.getStringExtra("VOICE_PROMPT") ?: ""
+        dosage = intent?.getStringExtra("DOSAGE") ?: ""
+        timeSlot = intent?.getStringExtra("TIME_SLOT") ?: ""
+
+        // Fallback: search active_alarms in SharedPreferences if voicePrompt is empty
+        if (voicePrompt.isBlank()) {
+            try {
+                val prefs = getSharedPreferences("MediVocePrefs", Context.MODE_PRIVATE)
+                val alarmsJson = prefs.getString("active_alarms", null)
+                if (!alarmsJson.isNullOrEmpty()) {
+                    val array = org.json.JSONArray(alarmsJson)
+                    for (i in 0 until array.length()) {
+                        val obj = array.optJSONObject(i) ?: continue
+                        if (obj.optString("name") == medName && obj.optString("time") == timeSlot) {
+                            voicePrompt = obj.optString("voicePrompt", "")
+                            if (dosage.isBlank()) dosage = obj.optString("dosage", "")
+                            if (voicePrompt.isNotBlank()) break
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error looking up voicePrompt from active_alarms", e)
+            }
+        }
+
+        Log.d(TAG, "Service started for $medName with voicePrompt: '$voicePrompt'")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -107,12 +135,16 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                     tts?.setSpeechRate(speed)
                     tts?.setPitch(if (tone == "empathetic") 1.2f else 1.0f)
 
-                    val textToSpeak = when {
-                        lang.lowercase().startsWith("it") -> "Attenzione, è l'ora di assumere il farmaco: $medName"
-                        lang.lowercase().startsWith("es") -> "Atención, es hora de tomar el medicamento: $medName"
-                        lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure de prendre le médicament : $medName"
-                        lang.lowercase().startsWith("de") -> "Achtung, es ist Zeit für Ihre Medizin: $medName"
-                        else -> "Attention, it is time to take your medication: $medName"
+                    val textToSpeak = if (voicePrompt.isNotBlank()) {
+                        voicePrompt
+                    } else {
+                        when {
+                            lang.lowercase().startsWith("it") -> "Attenzione, è l'ora di assumere il farmaco: $medName"
+                            lang.lowercase().startsWith("es") -> "Atención, es hora de tomar el medicamento: $medName"
+                            lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure de prendre le médicament : $medName"
+                            lang.lowercase().startsWith("de") -> "Achtung, es ist Zeit für Ihre Medizin: $medName"
+                            else -> "Attention, it is time to take your medication: $medName"
+                        }
                     }
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
