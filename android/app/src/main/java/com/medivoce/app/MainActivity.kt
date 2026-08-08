@@ -129,7 +129,7 @@ class MainActivity : BridgeActivity(), TextToSpeech.OnInitListener {
         try {
             val locale = when {
                 lang.lowercase().startsWith("it") -> Locale.ITALIAN
-                lang.lowercase().startsWith("es") -> Locale("es", "ES")
+                lang.lowercase().startsWith("es") -> Locale.forLanguageTag("es-ES")
                 lang.lowercase().startsWith("fr") -> Locale.FRENCH
                 lang.lowercase().startsWith("de") -> Locale.GERMAN
                 else -> Locale.ENGLISH
@@ -187,8 +187,14 @@ class MainActivity : BridgeActivity(), TextToSpeech.OnInitListener {
         @JavascriptInterface
         fun vibrate(durationMillis: Long) {
             try {
-                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                if (!vibrator.hasVibrator()) {
+                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                    vibratorManager?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                }
+                if (vibrator == null || !vibrator.hasVibrator()) {
                     Log.w("MediVoceNative", "vibrate: Device does not have a vibrator motor")
                     return
                 }

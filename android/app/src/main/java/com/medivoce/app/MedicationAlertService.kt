@@ -126,7 +126,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                 try {
                     val locale = when {
                         lang.lowercase().startsWith("it") -> Locale.ITALY
-                        lang.lowercase().startsWith("es") -> Locale("es", "ES")
+                        lang.lowercase().startsWith("es") -> Locale.forLanguageTag("es-ES")
                         lang.lowercase().startsWith("fr") -> Locale.FRANCE
                         lang.lowercase().startsWith("de") -> Locale.GERMANY
                         else -> Locale.US
