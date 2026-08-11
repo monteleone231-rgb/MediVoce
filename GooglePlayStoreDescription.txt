@@ -7,7 +7,6 @@ MediVoce è l'app semplice, intuitiva e pensata appositamente per chi ha bisogno
 
 Caratteristiche principali:
 - 🔊 Promemoria vocali intelligenti: ti chiama per nome e ti dice esattamente quale medicina prendere, senza dover leggere testi piccoli.
-- 📸 Scanner Codice a Barre: inquadra la scatola e l'app compila automaticamente nome del farmaco, dosaggio e istruzioni.
 - 🗺️ Trova Farmacia: localizza immediatamente le farmacie aperte più vicine con un solo tocco.
 - 📞 Chiamata di Emergenza: un bottone rapido per chiamare un parente o un medico.
 - 🌙 Accessibile: colori ad alto contrasto, interfaccia semplice, caratteri grandi, Always On Display e suoni configurabili.
