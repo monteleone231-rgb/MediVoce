@@ -1,6 +1,6 @@
 {
-  "name": "MediVoce Assistant",
-  "description": "Un\u0027app mobile accessibile, vocale ed empatica per aiutare le persone (soprattutto gli anziani) a ricordarsi di prendere le medicine, con notifiche vocali, controllo fotocamera per farmaci e codice Android integrato.",
+  "name": "Ricorda con Voce",
+  "description": "Un'app mobile accessibile ed empatica per gestire promemoria vocali quotidiani e routine con caratteri grandi e comandi vocali.",
   "requestFramePermissions": [
     "camera",
     "geolocation"

@@ -27,7 +27,7 @@
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="MediVoce"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
@@ -59,7 +59,7 @@
             android:exported="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Medicine reminders and alarms requiring immediate full-screen vocal and audio alerting when the device is locked" />
+                android:value="Voice reminders and alarms requiring immediate full-screen vocal and audio alerting when the device is locked" />
         </service>
 
         <!-- Alarm receiver from AlarmManager system broadcast -->

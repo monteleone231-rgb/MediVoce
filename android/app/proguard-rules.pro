@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# MediVoce - Production ProGuard & R8 Obfuscation Rules
+# Ricorda con Voce - Production ProGuard & R8 Obfuscation Rules
 # ------------------------------------------------------------------------------
 
 # 1. Protect the JavaScript Interface from being renamed or stripped.

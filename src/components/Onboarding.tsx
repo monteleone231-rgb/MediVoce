@@ -151,7 +151,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       setStep(nextS);
       speakCurrentStepInfo(lang, nextS);
     } else {
-      speakAnnouncement(lang === 'it' ? "Installazione completata! Benvenuto in MediVoce." : "Setup complete! Welcome to MediVoce.", lang, 0.85);
+      speakAnnouncement(lang === 'it' ? "Installazione completata! Benvenuto in Ricorda con Voce." : "Setup complete! Welcome to Ricorda con Voce.", lang, 0.85);
       onComplete(lang);
     }
   };
@@ -172,10 +172,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           {/* Upper header section */}
           <header className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center text-white font-bold text-lg shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
-                MV
+              <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center text-white font-bold text-base shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+                RCV
               </div>
-              <span className="font-sans font-extrabold text-xl tracking-tight text-[#1E3A8A]">MediVoce</span>
+              <span className="font-sans font-extrabold text-xl tracking-tight text-[#1E3A8A]">Ricorda con Voce</span>
             </div>
             <div className="flex items-center gap-2 bg-[#EFF6FF] py-1 px-3 rounded-full text-xs font-semibold text-[#1E40AF] border border-[#DBEAFE]">
               <Globe className="w-3.5 h-3.5 text-[#2563EB]" />
@@ -201,12 +201,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
                   <div className="space-y-4">
                     <h2 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-[#1E3A8A]">
-                      Informativa Privacy e Avvertenza Medica
+                      Informativa Privacy e Note di Utilizzo
                     </h2>
                     
                     <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm text-left max-h-[35vh] overflow-y-auto space-y-4 font-medium text-sm text-[#475569]">
                       <div>
-                        <h3 className="font-extrabold text-[#1E293B] mb-1">🏥 Avvertenza Medica</h3>
+                        <h3 className="font-extrabold text-[#1E293B] mb-1">📌 Note Generali</h3>
                         <p className="leading-relaxed">{t.medicalDisclaimer}</p>
                       </div>
                       <div className="h-px bg-slate-100 w-full" />
@@ -256,12 +256,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   {/* Asset loaded or placeholder illustration wrapper */}
                   <div className="relative mx-auto w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden bg-white shadow-md border border-[#E2E8F0] flex items-center justify-center p-2">
                     <img
-                      src="/src/assets/images/app_icon_pill_1783613961215.jpg"
-                      alt="MediVoce Logo Graphic"
+                      src="/icon.jpg"
+                      alt="Ricorda con Voce Logo"
                       className="w-full h-full object-contain animate-pulse-slow"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        e.currentTarget.src = "https://picsum.photos/seed/medivoce/300/300";
+                        e.currentTarget.src = "/icon.jpg";
                       }}
                     />
                   </div>
@@ -415,11 +415,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                           <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
                             {lang === 'it' ? (
                               <>
-                                Vai in <strong className="text-blue-600 font-bold">Impostazioni del Telefono &rarr; App &rarr; Accesso speciale alle app &rarr; Sveglie e promemoria</strong>. Cerca <strong className="text-blue-600 font-bold">MediVoce</strong> e assicurati che la spunta sia <strong className="text-emerald-600 font-bold">ATTIVA</strong>.
+                                Vai in <strong className="text-blue-600 font-bold">Impostazioni del Telefono &rarr; App &rarr; Accesso speciale alle app &rarr; Sveglie e promemoria</strong>. Cerca <strong className="text-blue-600 font-bold">Ricorda con Voce</strong> e assicurati che la spunta sia <strong className="text-emerald-600 font-bold">ATTIVA</strong>.
                               </>
                             ) : (
                               <>
-                                Go to <strong className="text-blue-600 font-bold">Settings &rarr; Apps &rarr; Special App Access &rarr; Alarms & Reminders</strong>. Find <strong className="text-blue-600 font-bold">MediVoce</strong> and make sure it is <strong className="text-emerald-600 font-bold">ENABLED</strong>.
+                                Go to <strong className="text-blue-600 font-bold">Settings &rarr; Apps &rarr; Special App Access &rarr; Alarms & Reminders</strong>. Find <strong className="text-blue-600 font-bold">Ricorda con Voce</strong> and make sure it is <strong className="text-emerald-600 font-bold">ENABLED</strong>.
                               </>
                             )}
                           </p>
@@ -436,8 +436,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                         },
                         'Configura Sveglie Precise',
                         'Configure Precise Alarms',
-                        'Questo pulsante aprirà la sezione speciale "Sveglie e promemoria" di Android per garantire l\'assoluta precisione temporale dell\'allarme vocale per i tuoi farmaci.',
-                        'This button will open the Android "Alarms & Reminders" special access page to guarantee high-precision scheduling for your vocal pill alarms.'
+                        'Questo pulsante aprirà la sezione speciale "Sveglie e promemoria" di Android per garantire l\'assoluta precisione temporale dell\'allarme vocale per i tuoi promemoria.',
+                        'This button will open the Android "Alarms & Reminders" special access page to guarantee high-precision scheduling for your vocal alarms.'
                       )}
                     </div>
  
@@ -455,11 +455,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                           <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
                             {lang === 'it' ? (
                               <>
-                                Vai in <strong className="text-amber-600 font-bold">Impostazioni del Telefono &rarr; App &rarr; MediVoce &rarr; Batteria</strong>. Imposta su <strong className="text-amber-600 font-bold">"Senza restrizioni"</strong>. Questo impedirà ad Android di chiudere l'app in background o standby.
+                                Vai in <strong className="text-amber-600 font-bold">Impostazioni del Telefono &rarr; App &rarr; Ricorda con Voce &rarr; Batteria</strong>. Imposta su <strong className="text-amber-600 font-bold">"Senza restrizioni"</strong>. Questo impedirà ad Android di chiudere l'app in background o standby.
                               </>
                             ) : (
                               <>
-                                Go to <strong className="text-amber-600 font-bold">Settings &rarr; Apps &rarr; MediVoce &rarr; Battery</strong>. Set to <strong className="text-amber-600 font-bold">"Unrestricted"</strong>. This prevents Android from killing the app in background or standby.
+                                Go to <strong className="text-amber-600 font-bold">Settings &rarr; Apps &rarr; Ricorda con Voce &rarr; Battery</strong>. Set to <strong className="text-amber-600 font-bold">"Unrestricted"</strong>. This prevents Android from killing the app in background or standby.
                               </>
                             )}
                           </p>
@@ -476,8 +476,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                         },
                         'Escludi Ottimizzazione Batteria',
                         'Disable Battery Optimization',
-                        'Questo pulsante aprirà la schermata di ottimizzazione della batteria di Android per consentire a MediVoce di funzionare stabilmente senza essere chiusa dal sistema operativo.',
-                        'This button will open the Android battery optimization controls, letting you set MediVoce to "Unrestricted" so that background reminders never fail.'
+                        'Questo pulsante aprirà la schermata di ottimizzazione della batteria di Android per consentire a Ricorda con Voce di funzionare stabilmente senza essere chiusa dal sistema operativo.',
+                        'This button will open the Android battery optimization controls, letting you set Ricorda con Voce to "Unrestricted" so that background reminders never fail.'
                       )}
                     </div>
  
@@ -495,11 +495,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                           <p className="text-[11px] sm:text-xs text-[#475569] leading-relaxed">
                             {lang === 'it' ? (
                               <>
-                                Per far sì che l'allarme a tutto schermo (rosso con i comandi vocali) appaia anche a telefono bloccato, attiva il permesso <strong className="text-purple-600 font-bold">"Mostra sopra altre app"</strong> o <strong className="text-purple-600 font-bold">"Visualizza sulla schermata di blocco"</strong>.
+                                Per far sì che l'allarme a tutto schermo (con i comandi vocali) appaia anche a telefono bloccato, attiva il permesso <strong className="text-purple-600 font-bold">"Mostra sopra altre app"</strong> o <strong className="text-purple-600 font-bold">"Visualizza sulla schermata di blocco"</strong>.
                               </>
                             ) : (
                               <>
-                                To let the full-screen red voice alarm appear even when locked, enable <strong className="text-purple-600 font-bold">"Display over other apps"</strong> or <strong className="text-purple-600 font-bold">"Show on lock screen"</strong>.
+                                To let the full-screen voice alarm appear even when locked, enable <strong className="text-purple-600 font-bold">"Display over other apps"</strong> or <strong className="text-purple-600 font-bold">"Show on lock screen"</strong>.
                               </>
                             )}
                           </p>
@@ -516,7 +516,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                         },
                         'Consenti Sopra Altre App',
                         'Allow Display Over Other Apps',
-                        'Questo pulsante aprirà la schermata dei permessi speciali per "Visualizzare sopra altre app", essenziale per mostrare la schermata rossa dell\'allarme vocale anche a telefono bloccato.',
+                        'Questo pulsante aprirà la schermata dei permessi speciali per "Visualizzare sopra altre app", essenziale per mostrare la schermata dell\'allarme vocale anche a telefono bloccato.',
                         'This button will open the Android system menu for "Display over other apps", which is essential for rendering full-screen alerts when the phone is locked.'
                       )}
                     </div>
@@ -539,7 +539,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                               </>
                             ) : (
                               <>
-                                Upon first launch, ensure you <strong className="text-emerald-600 font-bold">accept the push notification prompt</strong> to receive timely medication alerts.
+                                Upon first launch, ensure you <strong className="text-emerald-600 font-bold">accept the push notification prompt</strong> to receive timely reminder alerts.
                               </>
                             )}
                           </p>
@@ -556,8 +556,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                         },
                         'Attiva Notifiche di Sistema',
                         'Enable System Notifications',
-                        'Questo pulsante aprirà le impostazioni delle notifiche di sistema di Android per assicurarti che MediVoce possa inviarti gli allarmi quotidiani.',
-                        'This button will open the standard Android Notification settings for MediVoce, ensuring the system registers and fires audio notifications correctly.'
+                        'Questo pulsante aprirà le impostazioni delle notifiche di sistema di Android per assicurarti che Ricorda con Voce possa inviarti gli allarmi quotidiani.',
+                        'This button will open the standard Android Notification settings for Ricorda con Voce, ensuring the system registers and fires audio notifications correctly.'
                       )}
                     </div>
                   </div>

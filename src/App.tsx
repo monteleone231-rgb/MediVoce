@@ -2437,7 +2437,7 @@ export default function App() {
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-base font-black text-slate-800 leading-snug">
-                    {lang === 'it' ? "Eliminare questo farmaco?" : "Delete this medication?"}
+                    {lang === 'it' ? "Eliminare questo promemoria?" : "Delete this medication?"}
                   </h3>
                 </div>
                 <div className="flex gap-2.5 pt-1">
@@ -2710,7 +2710,7 @@ export default function App() {
                       className="w-full p-3 rounded-xl border-2 border-gray-200 bg-[#FCFAF7] focus:outline-none focus:border-[#E58045] text-xs"
                     />
                     <span className="text-3xs text-gray-400 leading-normal block italic mt-1">
-                      Se lasciato vuoto, l'app genererà un annuncio base scandendo ordinatamente il nome del farmaco.
+                      Se lasciato vuoto, l'app genererà un annuncio base scandendo ordinatamente il nome del promemoria.
                     </span>
                   </div>
                   {/* Stock/Inventory Management Block */}
@@ -2758,7 +2758,7 @@ export default function App() {
 
                   {/* Pill Color Identifier Selector */}
                   <div className="space-y-2 text-left">
-                    <span className="text-xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Colore Identificativo della Pillola" : "Medication Color Accent"}</span>
+                    <span className="text-xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Colore Identificativo del Promemoria" : "Medication Color Accent"}</span>
                     <div className="flex gap-3">
                       {([
                         { key: 'blue', color: 'bg-blue-500 border-blue-600', text: 'it-Blu' },
@@ -2856,9 +2856,9 @@ export default function App() {
                 {/* Info Text */}
                 <div className="text-xs text-slate-600 leading-relaxed font-semibold bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
                   {lang === 'it' ? (
-                    "I browser moderni e le Webview di Android richiedono autorizzazioni esplicite. Invece di far comparire fastidiosi errori nativi del sistema, MediVoce ti consente di caricare direttamente le tue suonerie preferite o attivare suoni integrati ad alta efficacia."
+                    "I browser moderni e le Webview di Android richiedono autorizzazioni esplicite. Invece di far comparire fastidiosi errori nativi del sistema, Ricorda con Voce ti consente di caricare direttamente le tue suonerie preferite o attivare suoni integrati ad alta efficacia."
                   ) : (
-                    "Modern browsers and Android Webviews require strict user permissions. To prevent system dialog errors, MediVoce allows you to upload custom ringtones directly or use pre-configured high-efficiency system alarms."
+                    "Modern browsers and Android Webviews require strict user permissions. To prevent system dialog errors, Ricorda con Voce allows you to upload custom ringtones directly or use pre-configured high-efficiency system alarms."
                   )}
                 </div>
 
@@ -3134,12 +3134,12 @@ export default function App() {
             <span>{lang === 'it' ? "Guida Intelligente" : "Smart Assistant"}</span>
           </span>
           <h3 className="text-2xl font-extrabold text-[#1E3A8A] tracking-tight leading-snug">
-            {lang === 'it' ? "La tua salute guidata dalla voce." : "Your health, guided by voice."}
+            {lang === 'it' ? "La tua giornata guidata dalla voce." : "Your day, guided by voice."}
           </h3>
           <div className="text-xs text-slate-500 font-medium leading-relaxed">
             {lang === 'it' 
-              ? "MediVoce unisce promemoria rassicuranti ad alta leggibilità e controlli vocali avanzati pensati soprattutto per le persone anziane."
-              : "MediVoce pairs reassuring voice notes with large geometric clarity & advanced vocal confirmation tailored for older adults."}
+              ? "Ricorda con Voce unisce promemoria rassicuranti ad alta leggibilità e controlli vocali avanzati pensati soprattutto per le persone anziane."
+              : "Ricorda con Voce pairs reassuring voice notes with large geometric clarity & advanced vocal confirmation tailored for older adults."}
           </div>
         </div>
 

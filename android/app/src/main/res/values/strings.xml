@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Nome dell'app -->
-    <string name="app_name">MediVoce</string>
+    <string name="app_name">Ricorda con Voce</string>
 
     <!-- Chat e Interfaccia -->
-    <string name="welcome_message">Benvenuto in MediVoce AI</string>
+    <string name="welcome_message">Benvenuto in Ricorda con Voce</string>
     <string name="hint_enter_message">Scrivi un messaggio...</string>
     <string name="button_send">Invia</string>
     <string name="button_scan">Scansiona Pillola</string>

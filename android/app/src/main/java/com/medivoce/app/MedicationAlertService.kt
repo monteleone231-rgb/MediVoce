@@ -79,7 +79,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Servizio Allarmi MediVoce",
+                "Servizio Allarmi Ricorda con Voce",
                 NotificationManager.IMPORTANCE_LOW
             )
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -87,7 +87,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
         }
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Allarme MediVoce attivo")
+            .setContentTitle("Allarme Ricorda con Voce attivo")
             .setContentText("Promemoria per: $medName")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -139,7 +139,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                         voicePrompt
                     } else {
                         when {
-                            lang.lowercase().startsWith("it") -> "Attenzione, è l'ora di assumere il farmaco: $medName"
+                            lang.lowercase().startsWith("it") -> "Attenzione, è l'ora del promemoria: $medName"
                             lang.lowercase().startsWith("es") -> "Atención, es hora de tomar el medicamento: $medName"
                             lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure de prendre le médicament : $medName"
                             lang.lowercase().startsWith("de") -> "Achtung, es ist Zeit für Ihre Medizin: $medName"

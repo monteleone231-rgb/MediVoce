@@ -1,7 +1,7 @@
 {
-  "name": "MediVoce",
-  "short_name": "MediVoce",
-  "description": "Ricevi promemoria vocali e traccia i tuoi farmaci quotidianamente.",
+  "name": "Ricorda con Voce",
+  "short_name": "Ricorda con Voce",
+  "description": "Promemoria vocali intelligenti e agenda semplice ad alta accessibilità.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F0F4F8",

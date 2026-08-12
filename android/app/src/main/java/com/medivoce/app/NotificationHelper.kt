@@ -10,7 +10,7 @@ import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
     private const val CHANNEL_ID = "medivoce_critical_reminders"
-    private const val CHANNEL_NAME = "Promemoria Farmaci MediVoce"
+    private const val CHANNEL_NAME = "Promemoria Vocali Ricorda con Voce"
 
     fun showNotification(
         context: Context,
@@ -28,7 +28,7 @@ object NotificationHelper {
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifiche critiche per l'assunzione di farmaci salvavita"
+                description = "Notifiche ed allarmi vocali per promemoria quotidiani"
                 enableLights(true)
                 enableVibration(true)
                 setShowBadge(true)
@@ -55,8 +55,8 @@ object NotificationHelper {
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Ora di assumere la medicina")
-            .setContentText("Prendi: $medName")
+            .setContentTitle("Ora del promemoria")
+            .setContentText("Promemoria: $medName")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setFullScreenIntent(fullScreenPendingIntent, true)

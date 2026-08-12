@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MediVoce"
+rootProject.name = "RicordaConVoce"
 include(":app")
 apply(from = "capacitor.settings.gradle")

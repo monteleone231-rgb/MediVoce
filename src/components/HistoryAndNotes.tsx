@@ -76,9 +76,9 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
       ? t.noNotesYet
       : todayNotes.map(n => `- [${n.hasSymptom ? 'Med' : 'Note'}]: ${n.text}`).join('\n');
 
-    const report = `📋 **MEDIVOCE HEALTH REPORT** (${todayStr})
+    const report = `📋 **RICORDA CON VOCE REPORT** (${todayStr})
 --------------------------------------
-👤 Patient: MediVoce User
+👤 Utente: Ricorda con Voce
 📈 ${t.todayMedsTitle}: ${complianceText}
 🌸 ${t.howDoYouFeel}: ${wellbeingEmoji} ${todayWellBeingScore ? `(${todayWellBeingScore}/5)` : ''}
 
@@ -86,7 +86,7 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
 ${notesText}
 
 ---
-Sent via MediVoce app.`;
+Sent via Ricorda con Voce app.`;
 
     navigator.clipboard.writeText(report);
     setShowShareToast(true);

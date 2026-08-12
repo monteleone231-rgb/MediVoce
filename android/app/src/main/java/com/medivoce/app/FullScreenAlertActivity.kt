@@ -197,7 +197,7 @@ fun FullScreenAlertScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "FARMACI DA ASSUMERE:",
+                            text = "PROMEMORIA DA COMPLETARE:",
                             color = Color(0xFF94A3B8),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -230,8 +230,8 @@ fun FullScreenAlertScreen(
                         .height(72.dp)
                 ) {
                     Text(
-                        text = "HO PRESO LA MEDICINA",
-                        fontSize = 20.sp,
+                        text = "HO COMPLETATO IL PROMEMORIA",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
