@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.medivoce.app"
+    namespace = "com.ricordaconvove"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.medivoce.app"
+        applicationId = "com.ricordaconvove"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.1.5"
+        versionCode = 31
+        versionName = "1.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

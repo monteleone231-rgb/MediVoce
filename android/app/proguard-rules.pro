@@ -10,7 +10,7 @@
 }
 
 # 2. General code optimization and obfuscation controls
--repackageclasses 'com.medivoce.app.internal'
+-repackageclasses 'com.ricordaconvove.internal'
 -allowaccessmodification
 
 # 3. Retain attributes needed for debugging/crash reporting in production

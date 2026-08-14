@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Heart, Plus, Pill, Award, Globe, MapPin, 
+  Heart, Plus, BellRing, AlarmClock, ClipboardList, CheckSquare, Award, Globe, MapPin, 
   Settings, CheckCircle, Volume2, 
   AlertTriangle, Mic, Clock, Camera, Calendar, 
   Smartphone, Bell, Sparkles, Phone, FileText, ChevronRight, ChevronDown, Coffee, Search
@@ -1294,7 +1294,7 @@ export default function App() {
           {/* Left info */}
           <div className="flex items-start gap-3">
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold shrink-0 border ${colorSet.bg} ${colorSet.text} ${colorSet.border}`}>
-              {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
+              {med.category === 'pill' ? '📝' : med.category === 'capsule' ? '🔔' : med.category === 'liquid' ? '⏰' : med.category === 'bottle' ? '📅' : med.category === 'inhaler' ? '🗣️' : med.category === 'cream' ? '📋' : med.category === 'injection' ? '💡' : '📌'}
             </div>
             <div>
               <h5 className="font-extrabold text-slate-800 leading-tight flex items-center gap-2">
@@ -1412,8 +1412,7 @@ export default function App() {
                   <div className={`absolute inset-0 rounded-full bg-amber-500/10 ${isSpeaking ? 'animate-ping' : ''}`} />
                   <div className="absolute inset-4 rounded-full bg-[#E58045]/20 animate-pulse" />
                   <div className="w-20 h-20 rounded-full bg-[#E58045] flex items-center justify-center text-white shadow-xl z-10">
-                    {(activeVoiceReminder.category === 'pill' || activeVoiceReminder.category === 'capsule') && <Pill className="w-10 h-10" />}
-                    {(activeVoiceReminder.category !== 'pill' && activeVoiceReminder.category !== 'capsule') && <Volume2 className="w-10 h-10" />}
+                    <BellRing className="w-10 h-10 animate-bounce" />
                   </div>
                 </div>
 
@@ -1605,7 +1604,7 @@ export default function App() {
                  {/* Medications listings */}
                  {todayTotal === 0 ? (
                    <div className="mb-6 p-8 border-2 border-dashed border-gray-200 text-center space-y-3">
-                     <Pill className="w-10 h-10 text-gray-300 mx-auto" />
+                     <ClipboardList className="w-10 h-10 text-slate-300 mx-auto" />
                      <div className="text-gray-500 text-sm font-medium">{t.noMedsToday}</div>
                    </div>
                  ) : (
@@ -1640,7 +1639,7 @@ export default function App() {
                                      med.pillColor === 'purple' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
                                      'bg-blue-50 text-blue-600 border border-blue-100'
                                }`}>
-                                 {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
+                                 {med.category === 'pill' ? '📝' : med.category === 'capsule' ? '🔔' : med.category === 'liquid' ? '⏰' : med.category === 'bottle' ? '📅' : med.category === 'inhaler' ? '🗣️' : med.category === 'cream' ? '📋' : med.category === 'injection' ? '💡' : '📌'}
                                </div>
                                <div className="min-w-0 flex-1">
                                  <h4 className="font-extrabold text-base text-[#1E293B] leading-snug tracking-tight break-words">
@@ -1754,7 +1753,7 @@ export default function App() {
                              <div className="flex justify-between items-start gap-2">
                                <div className="flex items-center gap-3">
                                  <div className="w-10 h-10 rounded-2xl bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-lg shrink-0">
-                                   {med.category === 'pill' ? '💊' : med.category === 'capsule' ? '💊' : med.category === 'liquid' ? '💧' : med.category === 'bottle' ? '🧪' : med.category === 'inhaler' ? '🌬️' : med.category === 'cream' ? '🧴' : med.category === 'injection' ? '💉' : '📦'}
+                                   {med.category === 'pill' ? '📝' : med.category === 'capsule' ? '🔔' : med.category === 'liquid' ? '⏰' : med.category === 'bottle' ? '📅' : med.category === 'inhaler' ? '🗣️' : med.category === 'cream' ? '📋' : med.category === 'injection' ? '💡' : '📌'}
                                  </div>
                                  <div>
                                    <h5 className="font-extrabold text-slate-700 text-sm leading-tight">{med.name}</h5>
@@ -2386,7 +2385,7 @@ export default function App() {
               activeTab === 'history' ? theme.text : 'text-slate-400 hover:text-[#1E293B]'
             }`}
           >
-            <Pill className="w-6 h-6" />
+            <BellRing className="w-6 h-6" />
             <span className="text-[10px] font-extrabold mt-1 uppercase tracking-wide">{t.tabMeds}</span>
           </button>
 
@@ -2571,14 +2570,14 @@ export default function App() {
                     <label className="text-xs font-bold text-gray-500 uppercase block">{t.categoryLabel}</label>
                     <div className="grid grid-cols-4 gap-2">
                       {([
-                        { key: 'pill', icon: '💊', labelMap: { it: 'Compressa', en: 'Pill', es: 'Pastilla', fr: 'Pilule' } },
-                        { key: 'capsule', icon: '💊', labelMap: { it: 'Capsula', en: 'Capsule', es: 'Cápsula', fr: 'Gélule' } },
-                        { key: 'liquid', icon: '💧', labelMap: { it: 'Liquido', en: 'Liquid', es: 'Líquido', fr: 'Liquide' } },
-                        { key: 'bottle', icon: '🧪', labelMap: { it: 'Gocce', en: 'Drops', es: 'Gotas', fr: 'Gouttes' } },
-                        { key: 'inhaler', icon: '🌬️', labelMap: { it: 'Inalatore', en: 'Inhaler', es: 'Inhalador', fr: 'Inhalateur' } },
-                        { key: 'cream', icon: '🧴', labelMap: { it: 'Crema', en: 'Cream', es: 'Crema', fr: 'Crème' } },
-                        { key: 'injection', icon: '💉', labelMap: { it: 'Iniezione', en: 'Injection', es: 'Inyección', fr: 'Injection' } },
-                        { key: 'other', icon: '📦', labelMap: { it: 'Altro', en: 'Other', es: 'Otro', fr: 'Autre' } }
+                        { key: 'pill', icon: '📝', labelMap: { it: 'Nota', en: 'Note', es: 'Nota', fr: 'Note' } },
+                        { key: 'capsule', icon: '🔔', labelMap: { it: 'Avviso Vocale', en: 'Voice Alert', es: 'Aviso Vocal', fr: 'Alerte Vocale' } },
+                        { key: 'liquid', icon: '⏰', labelMap: { it: 'Sveglia', en: 'Alarm', es: 'Alarma', fr: 'Alarme' } },
+                        { key: 'bottle', icon: '📅', labelMap: { it: 'Evento', en: 'Event', es: 'Evento', fr: 'Événement' } },
+                        { key: 'inhaler', icon: '🗣️', labelMap: { it: 'Nota Vocale', en: 'Voice Note', es: 'Nota de Voz', fr: 'Note Vocale' } },
+                        { key: 'cream', icon: '📋', labelMap: { it: 'Attività', en: 'Task', es: 'Tarea', fr: 'Tâche' } },
+                        { key: 'injection', icon: '💡', labelMap: { it: 'Routine', en: 'Routine', es: 'Rutina', fr: 'Routine' } },
+                        { key: 'other', icon: '📌', labelMap: { it: 'Altro', en: 'Other', es: 'Otro', fr: 'Autre' } }
                       ] as const).map((cat) => (
                         <button
                           key={cat.key}
@@ -2733,7 +2732,7 @@ export default function App() {
                     {formStockEnabled && (
                       <div className="grid grid-cols-2 gap-3 pt-1.5 animate-fade-in">
                         <div className="space-y-1">
-                          <span className="text-3xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Pillole Rimaste" : "Remaining Pills"}</span>
+                          <span className="text-3xs font-bold text-gray-500 uppercase block">{lang === 'it' ? "Quantità Rimasta" : "Remaining Count"}</span>
                           <input
                             type="number"
                             min="0"

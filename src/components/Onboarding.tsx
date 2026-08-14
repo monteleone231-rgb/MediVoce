@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TRANSLATIONS, LanguageCode } from '../types';
 import { speakAnnouncement } from '../utils';
 import { Globe, ArrowRight, Volume2, ShieldCheck, Music, MapPin, Settings, Battery, Eye, Bell, Check } from 'lucide-react';
+import bellIcon from '../assets/images/app_icon_bell_1786519890873.jpg';
 
 interface OnboardingProps {
   onComplete: (lang: LanguageCode) => void;
@@ -18,6 +19,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState<number>(-1);
   const [clickedSettings, setClickedSettings] = useState<Record<string, boolean>>({});
   const [mockToast, setMockToast] = useState<string | null>(null);
+  const [imgError, setImgError] = useState<boolean>(false);
 
   // Auto-hide toast after 4 seconds
   useEffect(() => {
@@ -253,17 +255,22 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     </div>
                   </div>
 
-                  {/* Asset loaded or placeholder illustration wrapper */}
+                  {/* App logo illustration wrapper */}
                   <div className="relative mx-auto w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden bg-white shadow-md border border-[#E2E8F0] flex items-center justify-center p-2">
-                    <img
-                      src="/icon.jpg"
-                      alt="Ricorda con Voce Logo"
-                      className="w-full h-full object-contain animate-pulse-slow"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.currentTarget.src = "/icon.jpg";
-                      }}
-                    />
+                    {!imgError ? (
+                      <img
+                        src={bellIcon}
+                        alt="Ricorda con Voce Logo"
+                        className="w-full h-full object-contain rounded-xl"
+                        referrerPolicy="no-referrer"
+                        onError={() => setImgError(true)}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex flex-col items-center justify-center text-white shadow-inner p-3">
+                        <Bell className="w-12 h-12 mb-1 drop-shadow-md animate-bounce" />
+                        <span className="font-extrabold text-xs tracking-tight text-center">Ricorda con Voce</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">

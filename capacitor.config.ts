@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.medivoce.app',
+  appId: 'com.ricordaconvove',
   appName: 'Ricorda con Voce',
   webDir: 'dist'
 };

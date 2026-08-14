@@ -7,7 +7,7 @@ extra.apply {
     set("androidxAppCompatVersion", "1.6.1")
     set("androidxCoordinatorLayoutVersion", "1.2.0")
     set("androidxCoreVersion", "1.13.1")
-    set("androidxFragmentVersion", "1.7.2")
+    set("androidxFragmentVersion", "1.7.1")
     set("androidxWebkitVersion", "1.11.0")
 }
 

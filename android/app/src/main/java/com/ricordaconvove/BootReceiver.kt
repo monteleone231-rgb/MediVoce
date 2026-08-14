@@ -1,4 +1,4 @@
-package com.medivoce.app
+package com.ricordaconvove
 
 import android.content.BroadcastReceiver
 import android.content.Context
