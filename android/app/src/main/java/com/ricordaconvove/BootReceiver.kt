@@ -21,7 +21,7 @@ class BootReceiver : BroadcastReceiver() {
         Log.d(TAG, "onReceive: Boot event detected with action=$action")
 
         if (action in bootActions) {
-            Log.i(TAG, "MediVoce: System restarted. Re-scheduling active medication reminders...")
+            Log.i(TAG, "RicordaConVoce: System restarted. Re-scheduling active reminders...")
             rescheduleAlarms(context)
         }
     }
@@ -42,7 +42,7 @@ class BootReceiver : BroadcastReceiver() {
             for (i in 0 until jsonArray.length()) {
                 val alarmObj = jsonArray.optJSONObject(i) ?: continue
                 val id = alarmObj.optInt("nativeId", -1)
-                val name = alarmObj.optString("name", "Medicina")
+                val name = alarmObj.optString("name", "Promemoria")
                 val timeStr = alarmObj.optString("time", "") // Format "HH:MM"
                 val isActive = alarmObj.optBoolean("isActive", false)
 

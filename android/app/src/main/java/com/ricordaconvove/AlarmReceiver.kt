@@ -14,16 +14,16 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getIntExtra("ALARM_ID", -1)
-        val name = intent.getStringExtra("MED_NAME") ?: "Medicina"
+        val name = intent.getStringExtra("MED_NAME") ?: "Promemoria"
         val voicePrompt = intent.getStringExtra("VOICE_PROMPT") ?: ""
         val dosage = intent.getStringExtra("DOSAGE") ?: ""
         val timeSlot = intent.getStringExtra("TIME_SLOT") ?: ""
 
         Log.d(TAG, "Alarm triggered! ID: $id, Name: $name, Prompt: $voicePrompt")
 
-        context.runWithWakeLock("medivoce::AlarmWakeLockTag", WAKELOCK_TIMEOUT_MS) {
-            // Start the MedicationAlertService to play alert audio
-            val serviceIntent = Intent(context, MedicationAlertService::class.java).apply {
+        context.runWithWakeLock("ricordaconvoce::AlarmWakeLockTag", WAKELOCK_TIMEOUT_MS) {
+            // Start the ReminderAlertService to play alert audio
+            val serviceIntent = Intent(context, ReminderAlertService::class.java).apply {
                 putExtra("ALARM_ID", id)
                 putExtra("MED_NAME", name)
                 putExtra("VOICE_PROMPT", voicePrompt)
@@ -37,7 +37,7 @@ class AlarmReceiver : BroadcastReceiver() {
                     context.startService(serviceIntent)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to start MedicationAlertService", e)
+                Log.e(TAG, "Failed to start ReminderAlertService", e)
             }
 
             // Trigger visual overlay notification with FullScreenIntent

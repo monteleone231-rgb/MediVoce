@@ -54,7 +54,7 @@
 
         <!-- Foreground alert audio loop service -->
         <service
-            android:name=".MedicationAlertService"
+            android:name=".ReminderAlertService"
             android:foregroundServiceType="specialUse"
             android:exported="false">
             <property

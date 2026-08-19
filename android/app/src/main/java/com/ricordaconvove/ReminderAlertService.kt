@@ -18,18 +18,18 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.util.Locale
 
-class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
+class ReminderAlertService : Service(), TextToSpeech.OnInitListener {
     private var ringtone: Ringtone? = null
     private var tts: TextToSpeech? = null
-    private var medName: String = "Medicina"
+    private var reminderName: String = "Promemoria"
     private var voicePrompt: String = ""
     private var dosage: String = ""
     private var timeSlot: String = ""
 
     companion object {
-        private const val TAG = "MedicationAlertService"
+        private const val TAG = "ReminderAlertService"
         private const val NOTIFICATION_ID = 99999
-        private const val CHANNEL_ID = "medivoce_alert_service_channel"
+        private const val CHANNEL_ID = "ricordaconvoce_alert_service_channel"
     }
 
     override fun onCreate() {
@@ -48,7 +48,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        medName = intent?.getStringExtra("MED_NAME") ?: "Medicina"
+        reminderName = intent?.getStringExtra("MED_NAME") ?: "Promemoria"
         voicePrompt = intent?.getStringExtra("VOICE_PROMPT") ?: ""
         dosage = intent?.getStringExtra("DOSAGE") ?: ""
         timeSlot = intent?.getStringExtra("TIME_SLOT") ?: ""
@@ -62,7 +62,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                     val array = org.json.JSONArray(alarmsJson)
                     for (i in 0 until array.length()) {
                         val obj = array.optJSONObject(i) ?: continue
-                        if (obj.optString("name") == medName && obj.optString("time") == timeSlot) {
+                        if (obj.optString("name") == reminderName && obj.optString("time") == timeSlot) {
                             voicePrompt = obj.optString("voicePrompt", "")
                             if (dosage.isBlank()) dosage = obj.optString("dosage", "")
                             if (voicePrompt.isNotBlank()) break
@@ -74,7 +74,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
             }
         }
 
-        Log.d(TAG, "Service started for $medName with voicePrompt: '$voicePrompt'")
+        Log.d(TAG, "Service started for $reminderName with voicePrompt: '$voicePrompt'")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -88,7 +88,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Allarme Ricorda con Voce attivo")
-            .setContentText("Promemoria per: $medName")
+            .setContentText("Promemoria per: $reminderName")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -139,11 +139,11 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                         voicePrompt
                     } else {
                         when {
-                            lang.lowercase().startsWith("it") -> "Attenzione, è l'ora del promemoria: $medName"
-                            lang.lowercase().startsWith("es") -> "Atención, es hora de tomar el medicamento: $medName"
-                            lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure de prendre le médicament : $medName"
-                            lang.lowercase().startsWith("de") -> "Achtung, es ist Zeit für Ihre Medizin: $medName"
-                            else -> "Attention, it is time to take your medication: $medName"
+                            lang.lowercase().startsWith("it") -> "Attenzione, è l'ora del promemoria: $reminderName"
+                            lang.lowercase().startsWith("es") -> "Atención, es hora del recordatorio: $reminderName"
+                            lang.lowercase().startsWith("fr") -> "Attention, c'est l'heure du rappel : $reminderName"
+                            lang.lowercase().startsWith("de") -> "Achtung, es ist Zeit für die Erinnerung: $reminderName"
+                            else -> "Attention, it is time for your reminder: $reminderName"
                         }
                     }
 
@@ -151,7 +151,7 @@ class MedicationAlertService : Service(), TextToSpeech.OnInitListener {
                         val params = Bundle().apply {
                             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
                         }
-                        tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, "medivoce_alert_speech")
+                        tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, "ricordaconvoce_alert_speech")
                     } else {
                         @Suppress("DEPRECATION")
                         tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null)

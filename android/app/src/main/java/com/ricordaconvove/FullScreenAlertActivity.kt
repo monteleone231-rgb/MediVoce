@@ -45,7 +45,7 @@ class FullScreenAlertActivity : ComponentActivity() {
         }
 
         val id = intent.getIntExtra("ALARM_ID", -1)
-        val medName = intent.getStringExtra("MED_NAME") ?: "Medicina"
+        val medName = intent.getStringExtra("MED_NAME") ?: "Promemoria"
         val voicePrompt = intent.getStringExtra("VOICE_PROMPT") ?: ""
         val dosage = intent.getStringExtra("DOSAGE") ?: ""
         val timeSlot = intent.getStringExtra("TIME_SLOT") ?: ""
@@ -105,7 +105,7 @@ class FullScreenAlertActivity : ComponentActivity() {
 
     private fun stopAlertService() {
         try {
-            stopService(Intent(this, MedicationAlertService::class.java))
+            stopService(Intent(this, ReminderAlertService::class.java))
         } catch (e: Exception) {
             // Service might not be running
         }
