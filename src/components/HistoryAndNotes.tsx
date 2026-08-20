@@ -59,14 +59,14 @@ export default function HistoryAndNotes({ lang, medications, notes, onAddNote, o
     const complianceText = totalScheduledToday === 0 
       ? t.noMedsToday
       : (lang === 'it' 
-          ? `Presi ${takenToday} di ${totalScheduledToday} farmaci (${Math.round((takenToday/totalScheduledToday)*100)}%)` 
+          ? `Completati ${takenToday} di ${totalScheduledToday} promemoria (${Math.round((takenToday/totalScheduledToday)*100)}%)` 
           : lang === 'es'
-          ? `Tomados ${takenToday} de ${totalScheduledToday} medicamentos (${Math.round((takenToday/totalScheduledToday)*100)}%)`
+          ? `Completados ${takenToday} de ${totalScheduledToday} recordatorios (${Math.round((takenToday/totalScheduledToday)*100)}%)`
           : lang === 'fr'
-          ? `Pris ${takenToday} sur ${totalScheduledToday} médicaments (${Math.round((takenToday/totalScheduledToday)*100)}%)`
+          ? `Complétés ${takenToday} sur ${totalScheduledToday} rappels (${Math.round((takenToday/totalScheduledToday)*100)}%)`
           : lang === 'de'
-          ? `${takenToday} von ${totalScheduledToday} Medikamenten eingenommen (${Math.round((takenToday/totalScheduledToday)*100)}%)`
-          : `Took ${takenToday} of ${totalScheduledToday} meds (${Math.round((takenToday/totalScheduledToday)*100)}%)`);
+          ? `${takenToday} von ${totalScheduledToday} Erinnerungen erledigt (${Math.round((takenToday/totalScheduledToday)*100)}%)`
+          : `Completed ${takenToday} of ${totalScheduledToday} reminders (${Math.round((takenToday/totalScheduledToday)*100)}%)`);
 
     const wellbeingEmoji = todayWellBeingScore === 5 ? '😊' : todayWellBeingScore === 4 ? '🙂' : todayWellBeingScore === 3 ? '😐' : todayWellBeingScore === 2 ? '🙁' : todayWellBeingScore === 1 ? '😔' : '-';
 

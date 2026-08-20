@@ -675,7 +675,7 @@ export default function App() {
              const target = getNextOccurrence(med, timeSlot, now);
 
              try {
-               const prompt = med.voicePrompt || `Attenzione, è l'ora di assumere il farmaco: ${med.name}`;
+               const prompt = med.voicePrompt || `Attenzione, è l'ora del promemoria: ${med.name}`;
                const dosage = med.dosage || '';
                android.scheduleAlarm(target.getTime(), slotNativeId, med.name, prompt, dosage, timeSlot);
                console.log(`[MediVoce] Native scheduled slot: ${med.name} at ${timeSlot} (${slotNativeId})`);
@@ -1023,7 +1023,7 @@ export default function App() {
       // Append stock warning if stock is low
       if (med.stockCurrent !== undefined && med.stockCurrent <= (med.stockMin || 5)) {
         const stockAlertMsg = lang === 'it' 
-          ? `Attenzione, la scorta di questo farmaco sta per esaurirsi. Rimangono solo ${med.stockCurrent} dosi.` 
+          ? `Attenzione, la scorta di questo promemoria sta per esaurirsi. Rimangono solo ${med.stockCurrent} dosi.` 
           : `Warning, stock is running low. Only ${med.stockCurrent} doses remaining.`;
         textToSpeak = `${textToSpeak}. ${stockAlertMsg}`;
       }
@@ -1734,11 +1734,11 @@ export default function App() {
                           "Other Active Reminders"}
                        </h4>
                        <p className="text-3xs text-[#64748B] font-bold uppercase tracking-wider">
-                         {lang === 'it' ? "Farmaci attivi programmati per altri giorni" :
-                          lang === 'es' ? "Medicamentos activos programados para otros días" :
-                          lang === 'fr' ? "Traitements actifs prévus pour d'autres jours" :
-                          lang === 'de' ? "Aktive Medikamente, die für andere Tage geplant sind" :
-                          "Active medications scheduled for other days"}
+                         {lang === 'it' ? "Promemoria attivi programmati per altri giorni" :
+                          lang === 'es' ? "Recordatorios activos programados para otros días" :
+                          lang === 'fr' ? "Rappels actifs prévus pour d'autres jours" :
+                          lang === 'de' ? "Aktive Erinnerungen, die für andere Tage geplant sind" :
+                          "Active reminders scheduled for other days"}
                        </p>
                      </div>
                      <div className="grid grid-cols-1 gap-3">
